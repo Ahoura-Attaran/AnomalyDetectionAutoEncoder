@@ -273,3 +273,151 @@ The preprocessing artifacts are also persisted to disk, allowing the transformat
 > Reducing the influence of extreme numerical values before scaling should produce a more stable representation of network-flow features and improve Autoencoder training behavior.
 
 **Next step:** Analyze V3 and determine whether the improvement is sufficient or whether the model requires additional changes.
+
+## V3 — Log Transformation for Heavy-Tailed Features
+
+### Motivation
+
+Version 2 introduced train-based percentile clipping and `RobustScaler` to reduce the effect of extreme values. However, the preprocessing pipeline could still produce excessively large scaled values for some highly skewed and zero-inflated features.
+
+Rate-based network-flow features such as `Flow Bytes/s` and `Flow Packets/s` can contain a large concentration of values near zero together with a long tail of very large values. In such cases, the IQR used by `RobustScaler` may remain very small, causing otherwise normal observations to be mapped to very large scaled values.
+
+The code comments associated this behavior with extremely large reconstruction losses and thresholds.
+
+### Change
+
+V3 introduced a signed logarithmic transformation before scaling:
+
+$$
+x' = sign(x)\log(1+|x|)
+$$
+
+implemented as:
+
+```python
+def log_transform(X_df):
+    return np.sign(X_df) * np.log1p(np.abs(X_df))
+```
+
+The transformation compresses large magnitudes while preserving the sign of the original value.
+
+### Updated preprocessing pipeline
+
+The V3 preprocessing pipeline became:
+
+```text
+Normal Data
+    ↓
+Train / Validation / Test split
+    ↓
+Compute clipping bounds from Train only
+    ↓
+Percentile clipping
+    ↓
+Signed log1p transformation
+    ↓
+RobustScaler fitted on Train only
+    ↓
+Autoencoder
+```
+
+The same train-derived clipping bounds and the same fitted scaler are applied to validation, normal test, and attack data.
+
+### What remained unchanged
+
+V3 intentionally kept the following components unchanged from V2:
+
+* Shallow Autoencoder architecture
+* Deep Autoencoder architecture
+* Bottleneck dimensions
+* Batch Normalization
+* Dropout
+* Adam optimizer
+* MSE reconstruction loss
+* EarlyStopping
+* ReduceLROnPlateau
+* ModelCheckpoint
+* 70/15/15 normal-data split
+* 99th-percentile validation threshold
+* Binary Normal vs Attack evaluation
+
+Therefore, V3 should primarily be interpreted as a **preprocessing refinement**, rather than a model-architecture experiment.
+
+---
+
+## V4 — Per-Attack-Type Evaluation
+
+### Motivation
+
+Previous versions evaluated all attack samples together as a single `Attack` class.
+
+Although this provides an overall binary anomaly-detection result, it can hide important differences between attack families.
+
+For example, a model may detect volumetric attacks effectively while failing to detect attacks whose flow-level characteristics are closer to normal traffic.
+
+Therefore, V4 introduced a diagnostic evaluation stage that evaluates each attack family separately.
+
+### Change
+
+A new function was introduced:
+
+```python
+evaluate_per_attack_type(...)
+```
+
+For every attack dataset, the function:
+
+1. Loads and cleans the attack data.
+2. Applies the same train-derived clipping bounds.
+3. Applies the signed `log1p` transformation.
+4. Applies the fitted `RobustScaler`.
+5. Calculates reconstruction error.
+6. Compares attack samples against the same untouched normal test set.
+7. Calculates attack-specific detection metrics.
+
+The reported metrics are:
+
+* Recall
+* Precision
+* F1-score
+* ROC-AUC
+* Number of attack samples
+
+### Evaluation structure
+
+V4 therefore contains two complementary evaluation levels:
+
+#### Global evaluation
+
+```text
+Normal Test + All Attack Types
+            ↓
+      Normal vs Attack
+            ↓
+ Classification Report
+ Confusion Matrix
+ ROC-AUC
+```
+
+#### Per-attack evaluation
+
+```text
+Normal Test + Attack Type A → Metrics
+Normal Test + Attack Type B → Metrics
+Normal Test + Attack Type C → Metrics
+...
+```
+
+### Scientific significance
+
+This change does not modify the trained model. Instead, it increases the diagnostic resolution of the experiment.
+
+V4 allows the research to answer not only:
+
+> Can the autoencoder detect attacks?
+
+but also:
+
+> Which attack types can the autoencoder detect reliably, and which attack types remain difficult?
+
+This distinction is important for interpreting the practical effectiveness of the anomaly-detection approach.
