@@ -1,123 +1,90 @@
 # Evaluation
 
-## 1. Evaluation Objective
+## 1. Global Evaluation
 
-The evaluation determines how effectively the Autoencoder separates normal network traffic from anomalous attack traffic.
-
-The primary task is binary anomaly detection:
+The primary task is binary:
 
 ```text
 Normal = 0
 Attack = 1
 ```
 
-## 2. Global Evaluation
+The normal test set is combined with the attack datasets after applying the same train-derived preprocessing pipeline.
 
-The untouched normal test set is combined with all available attack datasets.
+Metrics:
 
-For every attack dataset:
-
-1. Clean the features.
-2. Apply the fixed feature list.
-3. Apply train-derived clipping bounds.
-4. Apply signed log1p transformation.
-5. Apply the scaler fitted on training data.
-6. Calculate reconstruction error.
-
-The combined data is then classified using the selected threshold.
-
-## 3. Reported Metrics
-
-The global evaluation reports:
-
-- Classification report
-- Confusion matrix
+- Precision
+- Recall
+- F1
+- Confusion Matrix
 - ROC-AUC
 
-The classification report provides precision, recall, and F1-score for Normal and Attack.
-
-## 4. Confusion Matrix
-
-The confusion matrix is interpreted as:
+## 2. Confusion Matrix
 
 | | Predicted Normal | Predicted Attack |
 |---|---:|---:|
 | Actual Normal | TN | FP |
 | Actual Attack | FN | TP |
 
-This allows false positives and false negatives to be inspected separately.
+## 3. ROC-AUC
 
-## 5. ROC-AUC
+ROC-AUC uses continuous reconstruction error rather than thresholded predictions.
 
-ROC-AUC is calculated from the raw reconstruction error.
+Higher reconstruction error represents a stronger anomaly score.
 
-A larger reconstruction error represents a stronger anomaly score.
+## 4. Per-Attack Evaluation
 
-This means ROC-AUC evaluates the ranking quality of the anomaly score without fixing the operating point to one threshold.
-
-## 6. V4 — Per-Attack-Type Evaluation
-
-V4 adds a second evaluation layer.
-
-Instead of combining all attack groups into one class, each attack type is evaluated separately against the same normal test set.
-
-For attack type \(i\):
+V4 introduced independent evaluation of each attack family against the same normal test set:
 
 \[
 Normal \quad vs \quad Attack_i
 \]
 
-The following metrics are calculated:
+Reported metrics:
 
-- Attack Recall
+- Recall
 - Precision
-- F1-score
+- F1
 - ROC-AUC
-- Number of attack samples
+- sample count
 
-## 7. Attack Recall
+## 5. V5 — Feature-Level Diagnostic
 
-For a specific attack type:
+V5 adds a separate, model-independent diagnostic before training.
 
-\[
-Recall_i =
-rac{TP_i}{TP_i+FN_i}
-\]
+For each attack family it reports the top features with the largest standardized mean difference from normal traffic after the selected transformations.
 
-This measures the proportion of samples from that attack family detected as anomalous.
+This is not an Autoencoder performance metric.
 
-## 8. Why Per-Attack Analysis Matters
+It answers:
 
-An aggregate Attack metric can hide differences between attack families.
+> Is this attack family distinguishable in the selected feature representation at all?
 
-For example, strong detection of one attack family may dominate the aggregate result while another attack family remains poorly detected.
+This helps distinguish a model problem from a feature-information problem.
 
-Per-attack evaluation therefore provides diagnostic information about the weaknesses and strengths of the learned normal representation.
+## 6. V6 — Threshold-Aware Evaluation
 
-## 9. Current Evaluation Structure
+V6 keeps the global and per-attack evaluation procedures but supplies the F1-optimized threshold instead of the normal-only P99 threshold.
 
-```text
-                 ┌── Global Normal vs All Attacks
-Model → Score ───┤
-                 └── Normal vs Each Attack Type
-```
+The old P99 threshold is also calculated as a reference.
 
-## 10. Current Limitation
+## 7. V6 Evaluation Caveat
 
-The available source code does not provide the numerical outputs of these experiments. Therefore this document defines the evaluation methodology but does not claim specific accuracy, precision, recall, F1, or AUC values.
+Attack samples used for threshold calibration remain in the attack datasets used for evaluation.
 
-Those values should be populated from actual experiment logs/results.
+Therefore V6 threshold-dependent final metrics are not based on a perfectly disjoint calibration/test split.
 
-## 11. Future Evaluation Extensions
+This limitation must be reported in the final paper unless corrected in a later version.
 
-Potential later additions include:
+## 8. Required Final Results
 
-- Threshold sensitivity analysis
-- False-positive rate analysis
-- Attack-wise confusion analysis
-- Error-distribution comparison
-- Statistical comparison between model versions
-- Precision-recall curves
-- Detection-performance comparison across versions
+Numerical values should be populated from actual execution logs:
 
-These should be documented only when implemented and experimentally verified.
+- global Precision/Recall/F1/AUC;
+- confusion matrices;
+- per-attack metrics;
+- threshold values;
+- calibration F1;
+- validation loss and training epochs.
+
+No numerical result should be inferred from source code.

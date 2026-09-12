@@ -2,63 +2,79 @@
 
 ## 1. Purpose
 
-This document is reserved for quantitative analysis of the experiments.
+This document interprets measured results. It is separate from `06-experiment-history.md`, which records implementation changes.
 
-Unlike the experiment-history document, which records implementation changes, this document will interpret the measured results.
+## 2. Global Results
 
-## 2. Required Result Table
-
-For every completed version, the following table should eventually be populated:
-
-| Version | Model | Precision | Recall | F1 | ROC-AUC | Notes |
+| Version | Model | Precision | Recall | F1 | ROC-AUC | Threshold |
 |---|---|---:|---:|---:|---:|---|
-| V1 | Shallow | — | — | — | — | Baseline |
-| V1 | Deep | — | — | — | — | Baseline |
-| V2 | Shallow | — | — | — | — | Clipping + RobustScaler |
-| V2 | Deep | — | — | — | — | Clipping + RobustScaler |
-| V3 | Shallow | — | — | — | — | + Signed log1p |
-| V3 | Deep | — | — | — | — | + Signed log1p |
-| V4 | Shallow | — | — | — | — | Per-attack diagnostics |
-| V4 | Deep | — | — | — | — | Per-attack diagnostics |
+| V1 | Shallow | — | — | — | — | P99 |
+| V1 | Deep | — | — | — | — | P99 |
+| V2 | Shallow | — | — | — | — | P99 |
+| V2 | Deep | — | — | — | — | P99 |
+| V3 | Shallow | — | — | — | — | P99 |
+| V3 | Deep | — | — | — | — | P99 |
+| V4 | Shallow | — | — | — | — | P99 |
+| V4 | Deep | — | — | — | — | P99 |
+| V5 | Shallow | — | — | — | — | P99 |
+| V5 | Deep | — | — | — | — | P99 |
+| V6 | Shallow | — | — | — | — | F1-calibrated |
+| V6 | Deep | — | — | — | — | F1-calibrated |
 
 ## 3. Per-Attack Results
 
-From V4 onward, attack-specific results should be recorded separately:
+Record separately for:
 
-| Version | Model | Attack | Recall | Precision | F1 | AUC |
-|---|---|---|---:|---:|---:|---:|
-| V4 | Shallow | BruteForce | — | — | — | — |
-| V4 | Shallow | DoS | — | — | — | — |
-| V4 | Shallow | WebAttacks | — | — | — | — |
-| V4 | Shallow | Botnet | — | — | — | — |
-| V4 | Shallow | DDoS | — | — | — | — |
-| V4 | Shallow | PortScan | — | — | — | — |
-| V4 | Deep | BruteForce | — | — | — | — |
-| V4 | Deep | DoS | — | — | — | — |
-| V4 | Deep | WebAttacks | — | — | — | — |
-| V4 | Deep | Botnet | — | — | — | — |
-| V4 | Deep | DDoS | — | — | — | — |
-| V4 | Deep | PortScan | — | — | — | — |
+- BruteForce
+- DoS
+- WebAttacks
+- Botnet
+- DDoS
+- PortScan
 
-## 4. Interpretation Framework
+Metrics:
 
-For each experiment, analysis should answer:
+- Recall
+- Precision
+- F1
+- ROC-AUC
 
-- Did the overall detection performance improve?
-- Did false positives decrease?
-- Did false negatives decrease?
-- Did ROC-AUC improve?
-- Which attack types improved?
-- Which attack types became worse?
-- Did the change solve the original problem?
-- Did it introduce a new problem?
+## 4. V5 Feature-Separation Results
 
-## 5. Important Rule
+V5 results should record the strongest standardized mean differences per attack type.
 
-No numerical result should be entered into this document unless it comes from an actual experiment output, saved result, or execution log.
+| Attack | Feature | Effect Size | Rank |
+|---|---|---:|---:|
+| BruteForce | — | — | — |
+| DoS | — | — | — |
+| WebAttacks | — | — | — |
+| Botnet | — | — | — |
+| DDoS | — | — | — |
+| PortScan | — | — | — |
 
-## 6. V1–V4 Current State
+## 5. V6 Threshold Comparison
 
-At this stage, the source files establish the methodology and implementation changes, but no execution-result dataset is available in the current documentation set.
+| Model | Normal P99 | F1 Threshold | Calibration F1 | Final Test F1 |
+|---|---:|---:|---:|---:|
+| Shallow | — | — | — | — |
+| Deep | — | — | — | — |
 
-Therefore quantitative conclusions are intentionally left open.
+## 6. Interpretation Questions
+
+For each version:
+
+1. Did global detection improve?
+2. Did false positives decrease?
+3. Did false negatives decrease?
+4. Did AUC change?
+5. Which attacks improved?
+6. Which attacks worsened?
+7. Did V5 show weak feature-level separation?
+8. Did the tighter V6 bottleneck improve anomaly separation?
+9. Did threshold calibration improve F1?
+10. Did it increase false positives?
+11. Can V6 improvement be attributed to threshold, bottleneck, or both?
+
+## 7. Scientific Rule
+
+No numerical result should be inferred from source code.

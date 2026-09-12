@@ -1,91 +1,86 @@
 # Discussion
 
-## 1. Research Perspective
+## 1. Evolution
 
-The project follows an iterative engineering-to-research workflow.
-
-Each version is treated as an experiment in which a specific limitation is addressed while unnecessary changes to other components are avoided.
-
-## 2. Preprocessing as a Critical Component
-
-The first four versions show that anomaly detection performance is not determined only by the neural-network architecture.
-
-V1 established a baseline using StandardScaler.
-
-V2 addressed the influence of extreme values using train-based clipping and RobustScaler.
-
-V3 further addressed heavy-tailed distributions through signed log1p transformation.
-
-This sequence motivates a central discussion point:
-
-> Stable numerical representation of network-flow features is a prerequisite for reliable Autoencoder reconstruction.
-
-## 3. Model Architecture vs Data Representation
-
-The Autoencoder architecture remains unchanged through V4.
-
-This is useful experimentally because improvements observed between V1, V2, and V3 can be investigated primarily as preprocessing effects rather than architecture effects.
-
-However, numerical performance must still be measured before claiming that one preprocessing strategy is superior.
-
-## 4. Evaluation Granularity
-
-V4 adds per-attack-type analysis.
-
-This changes the interpretation of model performance from:
+The first six versions form the following progression:
 
 ```text
-Can the model detect attacks?
+V1: Baseline
+ ↓
+V2: Extreme-value control
+ ↓
+V3: Heavy-tail compression
+ ↓
+V4: Attack-family evaluation
+ ↓
+V5: Feature-level separability diagnostic
+ ↓
+V6: Latent compression + threshold calibration
 ```
 
-to:
+## 2. Preprocessing
 
-```text
-Which attack families can the learned normal representation distinguish?
-```
+V2 and V3 indicate that network-flow feature distributions require explicit numerical treatment.
 
-This is particularly relevant for anomaly detection because attack families can have substantially different statistical characteristics.
+The current preprocessing pipeline is:
 
-## 5. Threshold Sensitivity
+- train-derived clipping;
+- signed log1p;
+- RobustScaler.
 
-The current threshold is the 99th percentile of normal validation reconstruction error.
+## 3. Feature Separability
 
-This provides a reproducible calibration rule, but the threshold represents a particular operating point.
+V5 adds an important diagnostic layer.
 
-Later experiments should investigate whether different thresholds change:
+If an attack family has weak separation from normal traffic in the selected feature representation, changing the Autoencoder may not solve the information limitation.
 
-- False-positive rate
-- Attack recall
-- Precision
-- F1
-- Operational usefulness
+This makes feature-level analysis useful before increasing model complexity.
 
-## 6. Reproducibility and Leakage
+## 4. Bottleneck Compression
 
-The project explicitly saves preprocessing artifacts and derives data-dependent preprocessing parameters from training data.
+V6 reduces latent dimensions.
 
-This is important because using test or attack data to determine scaling or clipping parameters would make the evaluation optimistic.
+The hypothesis is that a tighter bottleneck may force the model to encode only the most characteristic structure of normal traffic.
 
-## 7. Limitations to Address Later
+However, excessive compression can also harm reconstruction of legitimate normal traffic.
 
-Potential limitations requiring later investigation include:
+## 5. Threshold Calibration
 
-- Numerical distribution differences between attack families
-- Threshold selection strategy
-- Class imbalance in evaluation
-- Dependence of results on the chosen feature set
-- Stability across random seeds
-- Generalization to unseen traffic
-- Comparison with non-neural anomaly detectors
-- Computational cost
-- Interpretability of reconstruction errors
+V1–V5 use a normal-only P99 threshold.
 
-These are discussion topics, not established experimental findings.
+V6 uses a small labeled calibration set to optimize F1.
 
-## 8. Current Scientific Position
+This provides a task-oriented operating point but changes the experimental setting.
 
-V1–V4 establish a progressively refined anomaly-detection pipeline.
+The correct terminology is:
 
-The current evidence from source code supports the claim that the implementation evolved from a basic scaled Autoencoder toward a pipeline with more robust preprocessing and more detailed evaluation.
+> Autoencoder anomaly detection with semi-supervised threshold calibration.
 
-Performance superiority between versions must be established from experimental results.
+## 6. V6 Confounding
+
+V6 changes both bottleneck size and threshold strategy.
+
+Therefore a V6 performance change cannot be assigned to either factor alone.
+
+A four-condition ablation would isolate the effects.
+
+## 7. Calibration/Test Separation
+
+V6 currently reuses calibration attack records during final evaluation.
+
+This should be corrected in a later version by separating calibration and final attack-test subsets.
+
+## 8. Practical Selection
+
+Final model selection should consider more than F1:
+
+- false-positive rate;
+- attack recall;
+- per-attack performance;
+- ROC-AUC;
+- threshold stability;
+- computational cost.
+
+## 9. Current Scientific Position
+
+V1–V6 provide a traceable evolution of the pipeline. Final conclusions must wait for verified numerical results.

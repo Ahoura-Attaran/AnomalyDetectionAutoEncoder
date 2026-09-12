@@ -1,12 +1,6 @@
 # Threshold Selection
 
-## 1. Purpose
-
-The Autoencoder produces a continuous reconstruction error rather than a binary prediction.
-
-A threshold is therefore required to convert reconstruction error into a normal/attack decision.
-
-## 2. Reconstruction Error
+## 1. Reconstruction Error
 
 For each sample:
 
@@ -14,68 +8,91 @@ For each sample:
 E(x)=rac{1}{n}\sum_{i=1}^{n}(x_i-\hat{x}_i)^2
 \]
 
-The implementation calculates the mean squared reconstruction error across all input features.
-
-## 3. Validation-Based Threshold
-
-The current V1–V4 implementation calculates the threshold from normal validation reconstruction errors.
-
-For each model:
-
-```python
-threshold = np.percentile(val_errors, 99)
-```
-
-Therefore:
+The decision rule is:
 
 \[
-T = P_{99}(E_{validation})
+\hat y =
+egin{cases}
+1 & E(x)>T\
+0 & E(x)\le T
+\end{cases}
 \]
 
-A sample is classified as anomalous when:
+## 2. V1–V5: Normal-Only P99
+
+The threshold was:
 
 \[
-E(x)>T
+T=P_{99}(E_{normal,val})
 \]
 
-## 4. Why Validation Data Is Used
+Only normal validation reconstruction errors were used.
 
-The normal dataset is separated into training, validation, and test subsets.
+## 3. V6: Semi-Supervised Calibration
 
-The validation set is used for:
+V6 introduces `find_best_threshold()`.
 
-- EarlyStopping / model selection
-- Threshold calibration
+The Autoencoder is still trained only on normal traffic.
 
-The normal test set is not used to calculate the threshold.
-
-This is an improvement over an earlier approach where validation data was reused without a separate untouched normal test set.
-
-## 5. Interpretation of the 99th Percentile
-
-The 99th percentile means that, under the validation distribution, approximately the highest 1% of normal reconstruction errors lie above the threshold.
-
-This does not guarantee a 1% false-positive rate on a different test distribution. It is a calibration rule based on the validation distribution.
-
-## 6. Separate Thresholds
-
-The shallow and deep models receive separate thresholds:
+For threshold selection, the calibration set contains:
 
 ```text
-shallow_threshold.pkl
-deep_threshold.pkl
+Normal validation reconstruction errors
++
+Up to 2,000 sampled errors from each attack family
 ```
 
-This is necessary because the two architectures can produce different reconstruction-error distributions.
+The attack samples are randomly selected with the reproducibility seed.
 
-## 7. Threshold and ROC-AUC
+## 4. F1 Optimization
 
-Threshold-based metrics depend on the selected threshold.
+Candidate thresholds are generated from the 50th through 99.9th percentiles of the combined calibration error distribution.
 
-ROC-AUC is different: it uses the continuous reconstruction error as an anomaly score and evaluates ranking performance independently of a single threshold.
+For each candidate:
 
-Therefore both threshold-dependent metrics and ROC-AUC are reported.
+- TP
+- FP
+- FN
+- Precision
+- Recall
+- F1
 
-## 8. Future Experimental Extensions
+are calculated.
 
-Later versions may compare the 99th percentile with alternative calibration methods. Such methods should be added only when supported by the corresponding experimental version and results.
+The selected threshold is:
+
+\[
+T^*=rg\max_T F1(T)
+\]
+
+## 5. Reference Threshold
+
+V6 still calculates the old P99 threshold:
+
+```python
+reference_percentile_threshold = np.percentile(val_errors, 99)
+```
+
+This enables direct comparison between the old and new operating points.
+
+## 6. Correct Terminology
+
+V6 should be described as:
+
+> Unsupervised Autoencoder training with semi-supervised threshold calibration.
+
+The attack labels influence the threshold, not the Autoencoder weights.
+
+## 7. Methodological Limitation
+
+The V6 source code does not remove the sampled calibration attack records from the attack datasets before final evaluation.
+
+Therefore threshold-dependent final metrics may contain calibration/evaluation overlap.
+
+A rigorous later version should use:
+
+```text
+Training attacks: none
+Calibration attacks: separate subset
+Final test attacks: disjoint subset
+```

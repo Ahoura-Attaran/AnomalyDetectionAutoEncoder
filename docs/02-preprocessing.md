@@ -1,178 +1,110 @@
 # Preprocessing
 
-## 1. Objective
-
-The preprocessing pipeline was developed incrementally to address numerical instability, inconsistent feature sets, and extreme feature distributions.
-
-The final pipeline currently represented by V3/V4 is:
+## 1. Final Pipeline Through V6
 
 ```text
-Raw Data
+Cleaning
    ↓
-Remove Inf / NaN
-   ↓
-Remove constant columns
-   ↓
-Select fixed feature columns
+Constant-feature removal
    ↓
 Normal Train / Validation / Test split
    ↓
-Train-based percentile clipping
+Train-based clipping
    ↓
-Signed log1p transformation
+Signed log1p
    ↓
 RobustScaler
-   ↓
-Autoencoder
 ```
 
-## 2. Cleaning NaN and Infinite Values
+## 2. Cleaning
 
-Infinite values are replaced with missing values:
+Infinite values are converted to NaN and missing rows are removed.
 
-```python
-X = X.replace([np.inf, -np.inf], np.nan)
-```
+Constant features are removed from the normal data and the resulting feature list is reused across datasets.
 
-Rows containing missing values are then removed:
-
-```python
-X = X.dropna()
-```
-
-Labels, when present, are aligned with the remaining feature indices.
-
-## 3. Constant Feature Removal
-
-Constant columns are detected using:
-
-```python
-X_all.columns[X_all.nunique() <= 1]
-```
-
-These columns contain no variation in the normal training source and therefore provide no useful information for reconstruction.
-
-The selected constant columns are saved to:
+Artifacts:
 
 ```text
 Cols/constant_cols.pkl
-```
-
-## 4. Feature Consistency
-
-A fixed feature list is saved to:
-
-```text
 Cols/feature_columns.pkl
 ```
 
-Other datasets are subsequently restricted to these same columns.
+## 3. Split
 
-This is important because the Autoencoder input dimension must remain identical between training and evaluation.
+Normal data uses a 70/15/15 train/validation/test split.
 
-## 5. Train / Validation / Test Split
+The normal test set is reserved for final evaluation.
 
-Normal data is divided using two `train_test_split` operations:
+## 4. V1 — StandardScaler
 
-- 70% training
-- 15% validation
-- 15% normal test
+V1 used `StandardScaler` without explicit clipping.
 
-The split uses:
+This was the baseline.
 
-```python
-random_state=42
-shuffle=True
-```
+## 5. V2 — Clipping + RobustScaler
 
-The training set is used to fit the preprocessing and train the Autoencoder.
-
-The validation set is used for model-selection callbacks and threshold calibration.
-
-The normal test set remains untouched until final evaluation.
-
-## 6. V1 — StandardScaler
-
-V1 used `StandardScaler`.
-
-This established the baseline preprocessing approach but was vulnerable to the influence of extreme values.
-
-## 7. V2 — Clipping + RobustScaler
-
-V2 introduced percentile clipping.
-
-For each feature, the lower and upper bounds are calculated from training data:
-
-```python
-lower_q = 0.001
-upper_q = 0.999
-```
-
-The resulting bounds are then applied to train, validation, normal test, and attack data.
-
-V2 also replaced `StandardScaler` with `RobustScaler`.
-
-The motivation was to reduce the influence of extreme values.
-
-The clipping bounds are saved to:
+V2 introduced train-derived percentile clipping:
 
 ```text
-Cols/clip_bounds.pkl
+lower = 0.001
+upper = 0.999
 ```
 
-## 8. V3 — Signed Logarithmic Transformation
+and replaced `StandardScaler` with `RobustScaler`.
 
-V3 introduced:
+The bounds are calculated only from training data and then reused for validation, normal test, and attack data.
+
+## 6. V3 — Signed Log1p
+
+V3 added:
 
 ```python
 np.sign(X_df) * np.log1p(np.abs(X_df))
 ```
 
-This transformation compresses large magnitudes while preserving the sign.
-
-It is applied after clipping and before `RobustScaler`.
-
-The motivation documented in the source code is to reduce the dynamic range of highly skewed, zero-inflated rate-based features such as `Flow Bytes/s` and `Flow Packets/s`.
-
-## 9. Final Preprocessing State in V3/V4
-
-The effective transformation is:
+after clipping and before RobustScaler.
 
 \[
-x_{clip} = clip(x, q_{0.001}, q_{0.999})
+x' = sign(x)\log(1+|x|)
 \]
 
-followed by:
+The purpose is to compress large magnitudes in highly skewed network-flow features.
+
+## 7. V4
+
+V4 kept the V3 preprocessing unchanged.
+
+Its primary contribution was per-attack evaluation.
+
+## 8. V5 — Feature-Separation Diagnostic
+
+V5 kept the V3 preprocessing unchanged but added a model-independent diagnostic.
+
+For each attack family, transformed attack means are compared with transformed normal means:
 
 \[
-x_{log}=sign(x_{clip})\log(1+|x_{clip}|)
+d_j =
+\left|
+rac{\mu_{attack,j}-\mu_{normal,j}}
+{\sigma_{normal,j}}
+ight|
 \]
 
-and finally RobustScaler transformation.
+The largest values are reported as the most separated features.
 
-The scaler is fitted only on the transformed training set and saved to:
+This diagnostic does not modify model training.
 
-```text
-models/scaler.pkl
-```
+## 9. V6
+
+V6 keeps exactly the same preprocessing pipeline as V5.
+
+Its main changes are:
+
+- tighter Autoencoder bottlenecks;
+- semi-supervised threshold calibration.
 
 ## 10. Leakage Control
 
-The following parameters are training-derived:
+Clipping bounds and scaler parameters remain training-derived.
 
-- Constant-feature selection
-- Clipping bounds
-- RobustScaler parameters
-
-They are reused for validation, normal test, and attack data.
-
-This is a central preprocessing rule of the experiment.
-
-## 11. Evolution Summary
-
-| Version | Cleaning | Clipping | Transformation | Scaling |
-|---|---|---|---|---|
-| V1 | Yes | No | None | StandardScaler |
-| V2 | Yes | Train-based | None | RobustScaler |
-| V3 | Yes | Train-based | Signed log1p | RobustScaler |
-| V4 | Same as V3 | Same | Same | Same |
+Attack samples used by V6 for threshold calibration do not affect preprocessing or Autoencoder weights.

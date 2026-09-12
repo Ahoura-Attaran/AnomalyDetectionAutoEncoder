@@ -2,169 +2,95 @@
 
 ## 1. Objective
 
-The Autoencoder learns to reconstruct normal network-flow feature vectors.
-
-During inference, a high reconstruction error indicates that the sample differs from the learned normal representation and may therefore be anomalous.
-
-## 2. Reconstruction Objective
-
-For an input vector \(x\), the Autoencoder produces:
+The Autoencoder learns a compact representation of normal network-flow data and reconstructs the input.
 
 \[
-\hat{x}=f_	heta(x)
+E(x)=rac{1}{n}\sum_{i=1}^{n}(x_i-\hat{x}_i)^2
 \]
 
-The training objective is Mean Squared Error:
+The reconstruction error is the anomaly score.
 
-\[
-L(x,\hat{x}) =
-rac{1}{n}\sum_{i=1}^{n}(x_i-\hat{x}_i)^2
-\]
+## 2. Shallow Autoencoder
 
-## 3. Shallow Autoencoder
-
-The architecture is:
+### V1–V5
 
 ```text
 Input
-  ↓
-Dense(64, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Dense(32, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Bottleneck(16, ReLU)
-  ↓
-Dense(32, ReLU)
-  ↓
-Dense(64, ReLU)
-  ↓
-Linear Output
+ ↓ Dense(64, ReLU)
+ ↓ BatchNorm
+ ↓ Dropout(0.2)
+ ↓ Dense(32, ReLU)
+ ↓ BatchNorm
+ ↓ Dropout(0.2)
+ ↓ Dense(16, ReLU)  [bottleneck]
+ ↓ Dense(32, ReLU)
+ ↓ Dense(64, ReLU)
+ ↓ Linear Output
 ```
 
-The bottleneck has 16 dimensions.
+### V6
 
-## 4. Deep Autoencoder
+Only the bottleneck is changed:
 
-The architecture is:
+```text
+Dense(8, ReLU) [bottleneck]
+```
+
+Thus V6 doubles the compression relative to V1–V5.
+
+## 3. Deep Autoencoder
+
+### V1–V5
 
 ```text
 Input
-  ↓
-Dense(128, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Dense(64, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Dense(32, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Bottleneck(8, ReLU)
-  ↓
-Dense(32, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Dense(64, ReLU)
-  ↓
-BatchNormalization
-  ↓
-Dropout(0.2)
-  ↓
-Dense(128, ReLU)
-  ↓
-Linear Output
+ ↓ 128 → BN → Dropout
+ ↓ 64 → BN → Dropout
+ ↓ 32 → BN → Dropout
+ ↓ Dense(8) [bottleneck]
+ ↓ 32 → BN → Dropout
+ ↓ 64 → BN → Dropout
+ ↓ 128
+ ↓ Linear Output
 ```
 
-The bottleneck has 8 dimensions.
+### V6
 
-## 5. Training Configuration
-
-Both architectures use:
-
-- Optimizer: Adam
-- Loss: MSE
-- Maximum epochs: 100
-- Batch size: 512
-- Shuffle: enabled
-
-Validation data is passed separately during training.
-
-## 6. Training Callbacks
-
-Three callbacks are used:
-
-### EarlyStopping
+The bottleneck is reduced:
 
 ```text
-monitor = val_loss
-patience = 10
-restore_best_weights = True
+Dense(4, ReLU) [bottleneck]
 ```
 
-### ReduceLROnPlateau
+## 4. Bottleneck Evolution
 
-```text
-monitor = val_loss
-factor = 0.5
-patience = 5
-min_lr = 1e-6
-```
+| Model | V1–V5 | V6 |
+|---|---:|---:|
+| Shallow | 16 | 8 |
+| Deep | 8 | 4 |
 
-### ModelCheckpoint
+The hypothesis is that stronger compression may force the model to learn a more compact representation of normal traffic. It may also hurt reconstruction if compression becomes excessive; this must be determined experimentally.
 
-The best validation-loss model is saved.
+## 5. Training
+
+Both models use:
+
+- Adam
+- MSE loss
+- maximum 100 epochs
+- batch size 512
+- shuffled training
+
+## 6. Callbacks
+
+- EarlyStopping: `val_loss`, patience 10, restore best weights
+- ReduceLROnPlateau: factor 0.5, patience 5, minimum LR `1e-6`
+- ModelCheckpoint: best validation-loss model
 
 ## 7. Reproducibility
-
-The code sets:
 
 ```python
 SEED = 42
 np.random.seed(SEED)
 tf.random.set_seed(SEED)
 ```
-
-This is intended to improve reproducibility across runs.
-
-## 8. Model Artifacts
-
-The pipeline saves:
-
-```text
-models/
-├── shallow_autoencoder.keras
-├── deep_autoencoder.keras
-├── scaler.pkl
-├── shallow_threshold.pkl
-└── deep_threshold.pkl
-```
-
-The exact artifact set may evolve in later versions.
-
-## 9. Model Evolution
-
-V1–V4 do not introduce a new Autoencoder architecture after the initial baseline.
-
-The major changes in these versions are preprocessing and evaluation.
-
-This controlled structure is useful for determining whether performance changes originate from data transformation rather than architecture changes.

@@ -2,101 +2,94 @@
 
 ## Proposed Title
 
-**Network Anomaly Detection in CICIDS2017 Using Autoencoders with Robust Feature Preprocessing**
+**Network Anomaly Detection Using Autoencoders with Robust Feature Preprocessing and Semi-Supervised Threshold Calibration**
 
-The title can be revised after the final model and results are established.
+The title should be finalized after V9.
 
 ## Abstract
 
-### To be completed after V9
+To be completed after the final experiment.
 
-The abstract should contain:
+Include:
 
-1. Problem
-2. Dataset
-3. Proposed method
-4. Main preprocessing contribution
-5. Main experimental finding
-6. Best quantitative results
-7. Conclusion
-
-No final numerical claim should be inserted until the experiments are complete.
+1. problem;
+2. dataset;
+3. methodology;
+4. preprocessing contribution;
+5. threshold strategy;
+6. best quantitative result;
+7. conclusion.
 
 ## 1. Introduction
 
-### 1.1 Background
-Network intrusion and anomaly detection.
+- Network intrusion and anomaly detection
+- Problem definition
+- Motivation for Autoencoder-based anomaly detection
+- Research objectives
+- Contributions
 
-### 1.2 Problem
-Detection of anomalous network-flow behavior without requiring a multi-class supervised classifier.
+Potential contributions:
 
-### 1.3 Motivation
-Learning normal traffic patterns through Autoencoders and identifying deviations through reconstruction error.
-
-### 1.4 Contributions
-
-Potential contributions, to be confirmed after the final experiments:
-
-- A reproducible Autoencoder anomaly-detection pipeline.
-- Train-only preprocessing parameter estimation.
-- Robust handling of heavy-tailed flow features.
-- Per-attack-family diagnostic evaluation.
-- Systematic experimental evolution from baseline to final model.
+- reproducible Autoencoder pipeline;
+- train-only preprocessing parameter estimation;
+- robust treatment of heavy-tailed flow features;
+- model-independent feature-separation analysis;
+- per-attack-family evaluation;
+- semi-supervised threshold calibration;
+- systematic V1→V9 experimentation.
 
 ## 2. Related Work
 
-To be completed with external literature research.
+Research:
 
-Suggested areas:
-
-- Network intrusion detection
-- CICIDS2017
-- Autoencoder-based anomaly detection
-- Reconstruction-error thresholding
-- Robust preprocessing of network-flow features
-- Unsupervised and semi-supervised intrusion detection
+- network intrusion detection;
+- CICIDS2017;
+- Autoencoder anomaly detection;
+- reconstruction-error methods;
+- robust preprocessing;
+- threshold calibration;
+- semi-supervised anomaly detection.
 
 ## 3. Dataset
 
 Describe:
 
-- CICIDS2017
-- Data collection structure
-- Flow representation
-- Experimental Parquet subsets
-- Normal traffic
-- Six selected attack groups
-- Feature representation
+- CICIDS2017;
+- flow representation;
+- experimental Parquet subsets;
+- normal traffic;
+- six selected attack groups;
+- feature representation.
 
-Exact sample counts and feature counts should be inserted from verified data.
+Exact counts must be verified from data.
 
 ## 4. Methodology
 
-### 4.1 Data Cleaning
+### 4.1 Cleaning
 
 Inf/NaN handling and constant-feature removal.
 
-### 4.2 Data Splitting
+### 4.2 Data Split
 
 70/15/15 normal split.
 
-### 4.3 Outlier Clipping
+### 4.3 Clipping
 
-Train-derived 0.1% and 99.9% bounds.
+Train-derived 0.001 and 0.999 quantile bounds.
 
-### 4.4 Signed Log Transformation
+### 4.4 Signed Log1p
 
 \[
 x'=sign(x)\log(1+|x|)
 \]
 
-### 4.5 Robust Scaling
+### 4.5 RobustScaler
 
-RobustScaler fitted only on training data.
+Fitted only on training data.
 
-### 4.6 Autoencoder Architecture
+### 4.6 Autoencoders
 
-Shallow and deep architectures.
+Shallow and deep architectures with V6 bottleneck changes.
 
 ### 4.7 Reconstruction Error
 
@@ -104,81 +97,56 @@ Shallow and deep architectures.
 E(x)=rac{1}{n}\sum_i(x_i-\hat{x}_i)^2
 \]
 
-### 4.8 Threshold
+### 4.8 Thresholding
 
-99th percentile of normal validation reconstruction errors.
+Compare normal-only P99 and semi-supervised F1 calibration.
+
+### 4.9 Feature Separability
+
+Describe V5's standardized mean-difference diagnostic.
 
 ## 5. Experimental Design
 
-Describe the V1→V9 evolution.
+Describe V1→V9.
 
-A key principle is controlled experimentation:
+Explicitly identify versions with multiple simultaneous changes.
 
-- Identify problem.
-- Introduce one main change.
-- Keep other components stable where possible.
-- Measure effect.
-- Decide whether to retain the change.
+V6 should be presented as a combined bottleneck and threshold experiment.
 
 ## 6. Results
 
-### 6.1 Global Results
-
-Comparison of versions and models.
-
-### 6.2 Per-Attack Results
-
-Comparison across:
-
-- BruteForce
-- DoS
-- WebAttacks
-- Botnet
-- DDoS
-- PortScan
-
-### 6.3 Threshold Analysis
-
-Evaluate operating points.
-
-### 6.4 Error Distribution
-
-Compare normal and attack reconstruction-error distributions.
+- Global results
+- Per-attack results
+- Feature-separation results
+- Threshold comparison
+- Ablation results if implemented
 
 ## 7. Discussion
 
-Interpret:
-
-- Why the final preprocessing works.
-- Which attack families remain difficult.
-- Difference between shallow and deep Autoencoders.
-- Practical limitations.
+Discuss preprocessing, latent representation, thresholding, attack-family differences, calibration/test separation, and deployment implications.
 
 ## 8. Conclusion
 
-Summarize the validated contribution and the final experimental result.
+Only conclusions supported by verified experiments.
 
 ## 9. Future Work
 
-Potential directions:
-
-- Alternative threshold calibration
-- Isolation Forest comparison
-- Random Forest baseline
-- Other Autoencoder architectures
-- Variational Autoencoder
-- Feature selection
-- Temporal modeling
-- Cross-dataset validation
-- Real industrial traffic validation
+- strict calibration/test separation;
+- threshold sensitivity;
+- alternative anomaly detectors;
+- feature selection;
+- temporal modeling;
+- cross-dataset validation;
+- real-network validation;
+- explainability.
 
 ## Appendix
 
-Include:
-
-- Hyperparameters
-- Feature list
-- Preprocessing parameters
-- Experiment log
-- Confusion matrices
-- Additional per-attack results
+- hyperparameters;
+- feature list;
+- preprocessing parameters;
+- experiment log;
+- threshold values;
+- confusion matrices;
+- per-attack tables;
+- training curves.
