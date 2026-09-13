@@ -1,186 +1,131 @@
-# Experiment History
+# 06 — Experiment History
 
-The project is documented as an experimental sequence:
+The project should be interpreted as an iterative sequence:
 
 ```text
-Version → Problem → Change → Result → Decision
+V1 → observed problem → V2 → observed problem → ... → V8
 ```
-
-Results are added only from actual execution output.
 
 ## V1 — Baseline
 
-### Change
-Initial Autoencoder pipeline using `StandardScaler`.
+**Method**
+- StandardScaler
+- normal-only 70/15/15 split
+- Shallow and Deep Autoencoders
+- ordinary MSE
+- P99 normal validation threshold
 
-### Configuration
-- 70/15/15 normal split
-- Shallow bottleneck 16
-- Deep bottleneck 8
-- Normal-validation P99 threshold
-- Global Normal vs Attack evaluation
+**Purpose**
+Establish the baseline.
 
-### Problem Identified
-Extreme values could distort scaling and reconstruction loss.
+## V2 — Robust Preprocessing
 
----
-
-## V2 — Clipping + RobustScaler
-
-### Problem
-Extreme finite values could strongly influence feature scaling.
-
-### Change
-- Train-derived 0.001/0.999 percentile clipping
-- `RobustScaler`
-
-### Controlled Components
-Model architecture, optimizer, loss, callbacks, split, and threshold method remained unchanged.
-
-### Classification
-Preprocessing experiment.
-
----
-
-## V3 — Signed Log1p
-
-### Problem
-Highly skewed and zero-inflated rate features could retain a large dynamic range even after robust scaling and clipping.
-
-### Change
-Added:
-
-\[
-x'=sign(x)\log(1+|x|)
-\]
-
-before RobustScaler.
-
-### Controlled Components
-Autoencoder architecture and threshold strategy remained unchanged.
-
-### Classification
-Preprocessing refinement.
-
----
-
-## V4 — Per-Attack-Type Evaluation
-
-### Problem
-A single aggregate attack metric could hide differences between attack families.
-
-### Change
-Added per-attack evaluation for:
-
-- BruteForce
-- DoS
-- WebAttacks
-- Botnet
-- DDoS
-- PortScan
-
-with Recall, Precision, F1, AUC, and sample count.
-
-### Classification
-Evaluation refinement.
-
----
-
-## V5 — Model-Independent Feature-Separation Diagnostic
-
-### Problem
-A weak attack-detection result could originate from the model, threshold, or insufficient information in the selected features.
-
-### Change
-Added:
-
-```python
-analyze_feature_separation(...)
-```
-
-The function operates before model training and compares transformed normal and attack feature means using a standardized difference equivalent to a Cohen's-d-style effect size.
-
-### Purpose
-Determine whether an attack family has strong feature-level separation from normal traffic before changing model architecture.
-
-### Controlled Components
-The V3 preprocessing, model architectures, P99 threshold, and evaluation strategy remained unchanged.
-
-### Classification
-Data-level diagnostic experiment.
-
----
-
-## V6 — Tighter Bottlenecks + Semi-Supervised Threshold Calibration
-
-### Problems
-V6 addresses two separate concerns:
-
-1. The normal-only P99 threshold may not provide the desired precision/recall operating point.
-2. A larger bottleneck may reconstruct patterns that should ideally receive higher anomaly errors.
-
-### Change A — Threshold
-A small labeled sample from each attack family is used only for threshold calibration.
-
-Up to 2,000 samples per attack family are used.
-
-The threshold maximizing F1 on the calibration set is selected.
-
-The previous normal-only P99 threshold is also calculated as a reference.
-
-### Change B — Bottleneck
-| Model | Previous | V6 |
-|---|---:|---:|
-| Shallow | 16 | 8 |
-| Deep | 8 | 4 |
-
-### What Stayed Fixed
-- cleaning
-- train/validation/test split
-- clipping
-- signed log1p
+**Change**
+- training-only 0.001/0.999 clipping
 - RobustScaler
-- optimizer
-- loss
-- callbacks
-- global evaluation
+
+**Reason**
+Extreme finite values could distort preprocessing and contribute to unstable losses.
+
+## V3 — Magnitude Compression
+
+**Change**
+- signed log1p on all features.
+
+**Reason**
+Compress highly skewed and very large values.
+
+## V4 — Attack-Specific Evaluation
+
+**Change**
+- per-attack Recall, Precision, F1 and AUC.
+
+**Reason**
+Aggregate metrics can hide weaknesses on individual attack families.
+
+## V5 — Feature Separability Diagnostic
+
+**Change**
+- Cohen's-d-style analysis between normal and each attack family.
+
+**Reason**
+Determine whether poor detection is caused by the model or by weak feature-level separability.
+
+## V6 — Stronger Compression + Threshold Calibration
+
+**Changes**
+- Shallow bottleneck: 16 → 8
+- Deep bottleneck: 8 → 4
+- F1-optimized threshold using labeled attack samples.
+
+**Reason**
+Test stronger representation compression and reduce the limitations of a normal-only P99 threshold.
+
+**Important**
+Two variables changed simultaneously, so causal attribution requires an ablation study.
+
+## V7 — Deep Bottleneck Revision
+
+**Change**
+- Deep bottleneck: 4 → 12
+- Shallow remains 8.
+
+**Reason**
+The V6 Deep bottleneck was considered potentially over-compressed. V7 tests whether a larger latent representation improves preservation of normal traffic patterns and anomaly separability.
+
+**Unchanged**
+- clipping
+- RobustScaler
+- signed log transform
+- Cohen's d diagnostic
+- F1 threshold calibration
 - per-attack evaluation
 
-### Scientific Interpretation
-V6 is a combined **model-capacity + decision-threshold experiment**.
+## V8 — Feature-Aware Autoencoder
 
-Because two important variables changed simultaneously, a performance difference cannot be causally attributed to only the bottleneck or only the threshold.
+V8 contains two major methodological changes.
 
-A future ablation should test:
+### A. Selective Log Transform
+
+Instead of transforming every feature, V8 calculates training-set skewness and applies signed log1p only when:
 
 ```text
-A: Old bottleneck + P99
-B: New bottleneck + P99
-C: Old bottleneck + F1 threshold
-D: New bottleneck + F1 threshold
+|skewness| > 1.0
 ```
 
-### Limitation
-Calibration attack samples are not removed from the final evaluation datasets in V6. This creates calibration/test overlap for threshold-dependent metrics.
+### B. Feature-Weighted MSE
 
----
+Cohen's d values from V8's feature-separation analysis are converted into weights from 1 to 5.
+
+The weighted loss is:
+
+```text
+L = mean_j [w_j (x_j - x̂_j)^2]
+```
+
+The same weights are used in reconstruction error.
+
+### V8 Hypothesis
+
+Features that are more informative for separating attacks from normal traffic should receive greater influence in the reconstruction objective and anomaly score.
 
 ## Version Comparison
 
-| Version | Main Change | Category | Shallow Bottleneck | Deep Bottleneck | Threshold |
-|---|---|---|---:|---:|---|
-| V1 | StandardScaler | Preprocessing | 16 | 8 | Normal P99 |
-| V2 | Clipping + RobustScaler | Preprocessing | 16 | 8 | Normal P99 |
-| V3 | Signed log1p | Preprocessing | 16 | 8 | Normal P99 |
-| V4 | Per-attack evaluation | Evaluation | 16 | 8 | Normal P99 |
-| V5 | Feature-separation diagnostic | Data diagnostic | 16 | 8 | Normal P99 |
-| V6 | Bottleneck reduction + F1 calibration | Model + Threshold | 8 | 4 | Semi-supervised F1 |
-| V7 | Pending | Pending | — | — | — |
-| V8 | Pending | Pending | — | — | — |
-| V9 | Pending | Pending | — | — | — |
+| Version | Preprocessing | Model change | Threshold | Evaluation |
+|---|---|---|---|---|
+| V1 | StandardScaler | Baseline | P99 | Global |
+| V2 | Clip + RobustScaler | None | P99 | Global |
+| V3 | + log1p | None | P99 | Global |
+| V4 | Same as V3 | None | P99 | Per-attack |
+| V5 | Same as V3 | None | P99 | Cohen's d |
+| V6 | Same | Bottleneck 8/4 | F1 calibration | Per-attack |
+| V7 | Same | Deep 12 | F1 calibration | Per-attack |
+| V8 | Selective log + weighted features | Same as V7 | F1 calibration | Weighted reconstruction + per-attack |
 
-## Experimental-Control Note
+## Next Scientific Step
 
-V1–V5 each have a dominant experimental change.
+V8 should be followed by controlled ablations to determine whether improvement comes from:
 
-V6 changes two major variables simultaneously. This is acceptable as an iterative engineering step, but the limitation should be explicitly acknowledged in the research methodology.
+1. selective log transformation;
+2. feature weighting;
+3. their interaction.

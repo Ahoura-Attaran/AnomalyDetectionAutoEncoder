@@ -2,90 +2,78 @@
 
 ## 1. Project Overview
 
-This project investigates network anomaly detection using Autoencoders trained on benign network traffic. The objective is to learn the reconstruction pattern of normal traffic and identify anomalous traffic through reconstruction error.
+This project investigates network anomaly detection on CICIDS2017-derived flow data using Autoencoder-based models.
 
-The implementation is developed as an iterative experimental pipeline so that preprocessing, model architecture, thresholding, and evaluation decisions remain traceable.
+The main objective is to learn the representation of **normal network traffic** and identify anomalous traffic through reconstruction error.
 
-## 2. Problem Definition
+The project has evolved incrementally from a baseline Autoencoder (V1) to a feature-aware, semi-supervised-threshold-calibrated approach (V8).
 
-The detection task is formulated as binary anomaly detection:
+## 2. Experimental Data
 
-- `0` = Normal
-- `1` = Attack
+The implementation uses processed Parquet files grouped into:
 
-The Autoencoder is trained on normal traffic. Individual attack families are mainly used for evaluation. From V6, a small labeled sample of each attack family is additionally used only for threshold calibration.
+- Benign-Monday-no-metadata.parquet
+- Bruteforce-Tuesday-no-metadata.parquet
+- DoS-Wednesday-no-metadata.parquet
+- WebAttacks-Thursday-no-metadata.parquet
+- Botnet-Friday-no-metadata.parquet
+- DDoS-Friday-no-metadata.parquet
+- Portscan-Friday-no-metadata.parquet
 
-## 3. Experimental Dataset
+The project treats the Benign dataset as the source of normal traffic for Autoencoder training, validation, and normal testing. Attack datasets are used for anomaly evaluation and, from V6 onward, for threshold calibration.
 
-The implementation loads:
+## 3. Main Pipeline
 
-| Group | File |
-|---|---|
-| Normal | `Benign-Monday-no-metadata.parquet` |
-| Brute Force | `Bruteforce-Tuesday-no-metadata.parquet` |
-| DoS | `DoS-Wednesday-no-metadata.parquet` |
-| Web Attacks | `WebAttacks-Thursday-no-metadata.parquet` |
-| Botnet | `Botnet-Friday-no-metadata.parquet` |
-| DDoS | `DDoS-Friday-no-metadata.parquet` |
-| PortScan | `Portscan-Friday-no-metadata.parquet` |
+1. Load Parquet datasets.
+2. Remove/align invalid observations.
+3. Remove constant features.
+4. Split normal data into train/validation/test.
+5. Compute training-only outlier clipping bounds.
+6. Transform skewed features.
+7. Fit RobustScaler on training data.
+8. Perform feature-separation analysis using Cohen's d.
+9. Train Shallow and Deep Autoencoders.
+10. Calculate reconstruction error.
+11. Select an anomaly threshold.
+12. Evaluate globally and separately for each attack family.
+13. Compare model behavior.
 
-## 4. Pipeline Through V6
+## 4. Model Families
 
-```text
-Data loading
-   ↓
-Cleaning
-   ↓
-Constant-feature removal
-   ↓
-Normal Train / Validation / Test split
-   ↓
-Train-derived percentile clipping
-   ↓
-Signed log1p transformation
-   ↓
-RobustScaler
-   ↓
-Autoencoder trained on normal data
-   ↓
-Reconstruction error
-   ↓
-Threshold calibration
-   ↓
-Global + per-attack evaluation
-```
-
-## 5. Model Families
-
-Two Autoencoders are maintained:
+Two Autoencoders are evaluated:
 
 - Shallow Autoencoder
 - Deep Autoencoder
 
-The initial bottlenecks were 16 and 8 dimensions. V6 reduces them to 8 and 4 dimensions.
+The architecture and bottleneck size were changed experimentally across versions.
 
-## 6. Experimental Evolution
+## 5. Evolution
 
-| Version | Main contribution |
+| Version | Main change |
 |---|---|
-| V1 | StandardScaler baseline |
-| V2 | Train-based clipping + RobustScaler |
+| V1 | Baseline AE, StandardScaler, normal-only P99 threshold |
+| V2 | Train-only clipping + RobustScaler |
 | V3 | Signed log1p transformation |
 | V4 | Per-attack-type evaluation |
-| V5 | Model-independent feature-separation diagnostic |
-| V6 | Semi-supervised threshold calibration + tighter bottlenecks |
-| V7 | Pending |
-| V8 | Pending |
-| V9 | Pending |
+| V5 | Feature-separation diagnostic using Cohen's d |
+| V6 | Bottleneck compression + F1-based semi-supervised threshold calibration |
+| V7 | Deep bottleneck changed from 4 to 12 |
+| V8 | Selective log transform + Cohen's-d-based feature-weighted MSE |
+
+## 6. Scientific Characterization
+
+The model is trained primarily in an unsupervised manner using normal traffic. From V6 onward, labeled attack samples are used only for threshold calibration, not for updating Autoencoder weights.
+
+V8 additionally uses attack/normal feature-separation information to construct feature weights for the reconstruction loss. Therefore V8 should be described carefully as an Autoencoder with **feature-aware supervised information in the training objective**, rather than as a purely unsupervised Autoencoder.
 
 ## 7. Reproducibility
 
+The code uses:
+
 ```python
 SEED = 42
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
 ```
 
-NumPy and TensorFlow seeds are initialized.
-
-## 8. Scientific Status
-
-V1–V6 define an increasingly refined methodology. Numerical superiority between versions must be established from actual execution results, not inferred from source code.
+Experimental outputs and metrics should be recorded without inventing values when an execution result is unavailable.

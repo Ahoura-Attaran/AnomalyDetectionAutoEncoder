@@ -1,86 +1,109 @@
-# Discussion
+# 08 — Discussion
 
-## 1. Evolution
+## 1. Evolution of the Approach
 
-The first six versions form the following progression:
+The project evolved from a conventional reconstruction-based anomaly detector toward a more feature-aware system.
+
+The major progression is:
 
 ```text
-V1: Baseline
- ↓
-V2: Extreme-value control
- ↓
-V3: Heavy-tail compression
- ↓
-V4: Attack-family evaluation
- ↓
-V5: Feature-level separability diagnostic
- ↓
-V6: Latent compression + threshold calibration
+Baseline
+  ↓
+Robust preprocessing
+  ↓
+Magnitude transformation
+  ↓
+Attack-specific diagnostics
+  ↓
+Feature separability analysis
+  ↓
+Threshold calibration
+  ↓
+Bottleneck revision
+  ↓
+Feature-aware loss
 ```
 
-## 2. Preprocessing
+## 2. V7 Interpretation
 
-V2 and V3 indicate that network-flow feature distributions require explicit numerical treatment.
+V7 revisits the latent representation capacity of the Deep Autoencoder.
 
-The current preprocessing pipeline is:
+The Deep bottleneck changes from 4 to 12.
 
-- train-derived clipping;
-- signed log1p;
-- RobustScaler.
+This tests the hypothesis that the V6 bottleneck was too restrictive.
 
-## 3. Feature Separability
+## 3. V8 Interpretation
 
-V5 adds an important diagnostic layer.
+V8 addresses a different question:
 
-If an attack family has weak separation from normal traffic in the selected feature representation, changing the Autoencoder may not solve the information limitation.
+> Should every feature contribute equally to the reconstruction objective?
 
-This makes feature-level analysis useful before increasing model complexity.
+The answer tested experimentally is no: features with stronger measured normal-vs-attack separation receive greater weights.
 
-## 4. Bottleneck Compression
+This is a hypothesis-driven change rather than an arbitrary architecture modification.
 
-V6 reduces latent dimensions.
+## 4. Selective Log Transformation
 
-The hypothesis is that a tighter bottleneck may force the model to encode only the most characteristic structure of normal traffic.
+V8 also challenges the assumption that every feature benefits from log transformation.
 
-However, excessive compression can also harm reconstruction of legitimate normal traffic.
+Only features with absolute training skewness above 1.0 are transformed.
 
-## 5. Threshold Calibration
+This attempts to preserve information in features whose distributions do not require strong compression.
 
-V1–V5 use a normal-only P99 threshold.
+## 5. Main Methodological Risk
 
-V6 uses a small labeled calibration set to optimize F1.
+The feature weights are calculated using attack data.
 
-This provides a task-oriented operating point but changes the experimental setting.
+Consequently, V8 is no longer a purely unsupervised training procedure.
 
-The correct terminology is:
+This must be stated explicitly in any paper or presentation.
 
-> Autoencoder anomaly detection with semi-supervised threshold calibration.
+## 6. Calibration Leakage Risk
 
-## 6. V6 Confounding
+V6–V8 reuse attack samples involved in threshold calibration during final evaluation.
 
-V6 changes both bottleneck size and threshold strategy.
+For rigorous publication results, calibration and evaluation attack samples should be disjoint.
 
-Therefore a V6 performance change cannot be assigned to either factor alone.
+## 7. Ablation Study
 
-A four-condition ablation would isolate the effects.
+The recommended next experiment is:
 
-## 7. Calibration/Test Separation
+| Experiment | Log | Weighted Loss | Threshold |
+|---|---|---|---|
+| A | All-feature log | No | F1 |
+| B | Selective log | No | F1 |
+| C | Selective log | Yes | F1 |
 
-V6 currently reuses calibration attack records during final evaluation.
+A second useful control is:
 
-This should be corrected in a later version by separating calibration and final attack-test subsets.
+```text
+Selective log + weighted loss + P99 threshold
+```
 
-## 8. Practical Selection
+This separates the contribution of the loss from the threshold strategy.
 
-Final model selection should consider more than F1:
+## 8. Final Model Selection
 
-- false-positive rate;
-- attack recall;
-- per-attack performance;
-- ROC-AUC;
-- threshold stability;
-- computational cost.
+The best model should not be selected using Recall alone.
 
-## 9. Current Scientific Position
+The decision should consider:
 
-V1–V6 provide a traceable evolution of the pipeline. Final conclusions must wait for verified numerical results.
+- Recall
+- Precision
+- F1
+- ROC-AUC
+- attack-family consistency
+- false-positive behavior
+- calibration protocol
+- computational cost
+- methodological validity
+
+## 9. Practical Conclusion
+
+The central contribution of the iterative work is not merely changing Autoencoder depth. It is progressively identifying where the anomaly-detection pipeline loses information:
+
+- preprocessing;
+- representation compression;
+- threshold selection;
+- feature separability;
+- feature contribution to reconstruction error.

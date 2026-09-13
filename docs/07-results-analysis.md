@@ -1,80 +1,67 @@
-# Results Analysis
+# 07 — Results and Analysis
 
 ## 1. Purpose
 
-This document interprets measured results. It is separate from `06-experiment-history.md`, which records implementation changes.
+This document records numerical results only after actual execution of the corresponding version.
 
-## 2. Global Results
+No metric is fabricated here.
 
-| Version | Model | Precision | Recall | F1 | ROC-AUC | Threshold |
-|---|---|---:|---:|---:|---:|---|
-| V1 | Shallow | — | — | — | — | P99 |
-| V1 | Deep | — | — | — | — | P99 |
-| V2 | Shallow | — | — | — | — | P99 |
-| V2 | Deep | — | — | — | — | P99 |
-| V3 | Shallow | — | — | — | — | P99 |
-| V3 | Deep | — | — | — | — | P99 |
-| V4 | Shallow | — | — | — | — | P99 |
-| V4 | Deep | — | — | — | — | P99 |
-| V5 | Shallow | — | — | — | — | P99 |
-| V5 | Deep | — | — | — | — | P99 |
-| V6 | Shallow | — | — | — | — | F1-calibrated |
-| V6 | Deep | — | — | — | — | F1-calibrated |
+## 2. Required Comparison
 
-## 3. Per-Attack Results
+The main comparison should include:
 
-Record separately for:
-
-- BruteForce
-- DoS
-- WebAttacks
-- Botnet
-- DDoS
-- PortScan
-
-Metrics:
-
-- Recall
-- Precision
-- F1
-- ROC-AUC
-
-## 4. V5 Feature-Separation Results
-
-V5 results should record the strongest standardized mean differences per attack type.
-
-| Attack | Feature | Effect Size | Rank |
-|---|---|---:|---:|
-| BruteForce | — | — | — |
-| DoS | — | — | — |
-| WebAttacks | — | — | — |
-| Botnet | — | — | — |
-| DDoS | — | — | — |
-| PortScan | — | — | — |
-
-## 5. V6 Threshold Comparison
-
-| Model | Normal P99 | F1 Threshold | Calibration F1 | Final Test F1 |
+| Version | Shallow F1 | Shallow AUC | Deep F1 | Deep AUC |
 |---|---:|---:|---:|---:|
-| Shallow | — | — | — | — |
-| Deep | — | — | — | — |
+| V1 | — | — | — | — |
+| V2 | — | — | — | — |
+| V3 | — | — | — | — |
+| V4 | — | — | — | — |
+| V5 | — | — | — | — |
+| V6 | — | — | — | — |
+| V7 | — | — | — | — |
+| V8 | — | — | — | — |
 
-## 6. Interpretation Questions
+## 3. Attack-Level Analysis
 
-For each version:
+For V8, record:
 
-1. Did global detection improve?
-2. Did false positives decrease?
-3. Did false negatives decrease?
-4. Did AUC change?
-5. Which attacks improved?
-6. Which attacks worsened?
-7. Did V5 show weak feature-level separation?
-8. Did the tighter V6 bottleneck improve anomaly separation?
-9. Did threshold calibration improve F1?
-10. Did it increase false positives?
-11. Can V6 improvement be attributed to threshold, bottleneck, or both?
+| Attack | Recall | Precision | F1 | AUC | N |
+|---|---:|---:|---:|---:|---:|
+| Bruteforce | — | — | — | — | — |
+| DoS | — | — | — | — | — |
+| WebAttacks | — | — | — | — | — |
+| Botnet | — | — | — | — | — |
+| DDoS | — | — | — | — | — |
+| Portscan | — | — | — | — | — |
 
-## 7. Scientific Rule
+## 4. Feature-Weight Analysis
 
-No numerical result should be inferred from source code.
+V8 should additionally record:
+
+- number of skewed features;
+- threshold used for skewness;
+- minimum feature weight;
+- maximum feature weight;
+- top weighted features;
+- Cohen's d values used to construct weights.
+
+## 5. Interpretation Rules
+
+A higher Recall means fewer attacks are missed.
+
+A higher Precision means fewer normal samples are incorrectly classified as attacks.
+
+F1 summarizes Precision and Recall.
+
+ROC-AUC evaluates ranking/separation based on reconstruction score and is independent of the chosen threshold.
+
+## 6. Important Scientific Question
+
+If V8 improves metrics, the documentation must determine whether the improvement is caused by:
+
+- selective log transformation;
+- feature weighting;
+- threshold behavior;
+- or a combination.
+
+A single V8-vs-V7 comparison cannot isolate these causes.

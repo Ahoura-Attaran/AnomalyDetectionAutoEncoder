@@ -1,78 +1,61 @@
-# Dataset
+# 01 — Dataset
 
 ## 1. Dataset Source
 
-The project is based on CICIDS2017-derived network-flow data.
+The project is based on CICIDS2017-derived network flow data.
 
-The Autoencoder implementation loads processed Parquet subsets rather than the original daily CSV files.
+The external source used during the project is the Hugging Face CICIDS2017 repository:
+
+https://huggingface.co/datasets/bvk/CICIDS-2017
+
+The project code does not directly train on the five raw daily CSV files. Instead, it loads processed Parquet files grouped by traffic/attack family.
 
 ## 2. Experimental Files
 
-| Group | File |
-|---|---|
-| Normal | `Benign-Monday-no-metadata.parquet` |
-| Brute Force | `Bruteforce-Tuesday-no-metadata.parquet` |
-| DoS | `DoS-Wednesday-no-metadata.parquet` |
-| Web Attacks | `WebAttacks-Thursday-no-metadata.parquet` |
-| Botnet | `Botnet-Friday-no-metadata.parquet` |
-| DDoS | `DDoS-Friday-no-metadata.parquet` |
-| PortScan | `Portscan-Friday-no-metadata.parquet` |
-
-## 3. Loading
-
-Each Parquet file is loaded using `pandas.read_parquet()`. Column names are normalized with:
-
-```python
-df.columns = df.columns.str.strip()
+```text
+Benign-Monday-no-metadata.parquet
+Bruteforce-Tuesday-no-metadata.parquet
+DoS-Wednesday-no-metadata.parquet
+WebAttacks-Thursday-no-metadata.parquet
+Botnet-Friday-no-metadata.parquet
+DDoS-Friday-no-metadata.parquet
+Portscan-Friday-no-metadata.parquet
 ```
 
-## 4. Cleaning
+## 3. Role of Each Dataset
 
-The pipeline:
+| Group | Role |
+|---|---|
+| Benign | Normal traffic used for model development |
+| Bruteforce | Attack evaluation/calibration |
+| DoS | Attack evaluation/calibration |
+| WebAttacks | Attack evaluation/calibration |
+| Botnet | Attack evaluation/calibration |
+| DDoS | Attack evaluation/calibration |
+| Portscan | Attack evaluation/calibration |
 
-1. separates `Label` when present;
-2. replaces `±inf` with NaN;
-3. drops NaN rows;
-4. removes constant columns;
-5. applies the fixed feature list.
+## 4. Normal Data Split
 
-## 5. Normal Split
-
-Normal data is split into:
+The normal dataset is split into:
 
 - 70% training
 - 15% validation
-- 15% normal test
+- 15% untouched normal test
 
-with `random_state=42` and shuffling.
+using `train_test_split`, `random_state=42`, and shuffling.
 
-## 6. Attack Groups
+The validation set is used for model training control such as EarlyStopping. The normal test set is reserved for final evaluation.
 
-The six attack groups remain separate:
+## 5. Feature Preparation
 
-- BruteForce
-- DoS
-- WebAttacks
-- Botnet
-- DDoS
-- PortScan
+The code:
 
-V6 samples up to 2,000 records from each attack group for threshold calibration. These samples do not train the Autoencoder.
+- removes the `Label` column from model inputs;
+- replaces positive/negative infinity with NaN;
+- removes rows containing NaN;
+- identifies constant columns using `nunique() <= 1`;
+- stores the resulting feature list for consistent processing.
 
-## 7. Dataset Verification
+## 6. Reproducibility and Verification
 
-Before publication, exact row counts, feature counts, labels, constant columns, and post-cleaning counts should be extracted from the actual Parquet files.
-
-They are not fabricated here from source code.
-
-## 8. Leakage Considerations
-
-Preprocessing parameters are derived from normal training data:
-
-- constant-feature selection;
-- clipping bounds;
-- RobustScaler parameters.
-
-V6 additionally uses labeled attack samples for threshold calibration. Therefore the training remains normal-only, but the overall decision procedure is no longer purely unsupervised.
-
-For rigorous final evaluation, calibration samples should be excluded from the final test set.
+Exact row counts, feature counts, and label distributions should be generated from the actual Parquet files and recorded as experiment outputs. They should not be inferred from the external dataset description.

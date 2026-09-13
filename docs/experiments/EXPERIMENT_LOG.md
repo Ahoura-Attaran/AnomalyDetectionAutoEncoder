@@ -1,39 +1,35 @@
 # Experiment Log
 
-| ID | Version | Main Change | Reason | Result | Decision |
+| ID | Version | Change | Reason | Result | Decision |
 |---|---|---|---|---|---|
-| EXP-001 | V1 | StandardScaler baseline | Establish baseline | Pending execution record | Baseline |
-| EXP-002 | V2 | Clipping + RobustScaler | Reduce extreme-value influence | Pending execution record | Retained |
-| EXP-003 | V3 | Signed log1p | Compress heavy-tailed features | Pending execution record | Retained |
-| EXP-004 | V4 | Per-attack evaluation | Reveal attack-family differences | Diagnostic output pending | Retained |
-| EXP-005 | V5 | Feature-separation diagnostic | Check feature-level separability | Diagnostic output pending | Retained |
-| EXP-006 | V6 | F1 threshold + tighter bottlenecks | Test decision calibration and stronger compression | Pending execution record | To evaluate |
+| EXP-001 | V1 | Baseline AE + StandardScaler + P99 | Establish baseline | Record from execution | Baseline |
+| EXP-002 | V2 | Clipping + RobustScaler | Improve preprocessing robustness | Record from execution | Compare |
+| EXP-003 | V3 | Signed log1p | Compress large/skewed values | Record from execution | Compare |
+| EXP-004 | V4 | Per-attack evaluation | Reveal family-specific weaknesses | Record from execution | Diagnostic |
+| EXP-005 | V5 | Cohen's d feature separation | Determine feature-level separability | Record from execution | Diagnostic |
+| EXP-006 | V6 | Bottleneck compression + F1 threshold | Test representation compression and threshold calibration | Record from execution | Requires ablation |
+| EXP-007 | V7 | Deep bottleneck 4 → 12 | Test whether V6 Deep model was over-compressed | Record from execution | Compare |
+| EXP-008 | V8 | Selective log + feature-weighted MSE | Preserve less-skewed features and emphasize discriminative features | Record from execution | Requires ablation |
 
-## V6 Control Note
+## V8 Reproducibility Fields
 
-V6 changes:
+When V8 is executed, record:
 
-1. Shallow bottleneck: 16 → 8
-2. Deep bottleneck: 8 → 4
-3. Threshold: normal P99 → F1-optimized calibration
+- random seed;
+- number of input features;
+- number of skewed features;
+- skewness threshold;
+- feature-weight range;
+- top weighted features;
+- Shallow best epoch;
+- Deep best epoch;
+- calibration threshold;
+- calibration F1;
+- final global metrics;
+- per-attack metrics.
 
-Therefore V6 is not a one-variable ablation.
+## Methodological Note
 
-## Logging Rule
+V8 should not be compared with V7 as if only one variable changed. It changes both the log-transform policy and the training objective.
 
-For future versions record:
-
-- version;
-- code revision;
-- dataset;
-- change;
-- motivation;
-- hyperparameters;
-- threshold;
-- global metrics;
-- per-attack metrics;
-- diagnostic outputs;
-- observed problem;
-- decision.
-
-Never overwrite historical entries.
+Therefore a controlled ablation is required before claiming that either change independently caused an improvement.

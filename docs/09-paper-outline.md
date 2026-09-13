@@ -1,152 +1,151 @@
-# Paper Outline
+# 09 — Paper Outline
 
 ## Proposed Title
 
-**Network Anomaly Detection Using Autoencoders with Robust Feature Preprocessing and Semi-Supervised Threshold Calibration**
+**CICIDS2017 Network Anomaly Detection Using Feature-Aware Autoencoders and Semi-Supervised Threshold Calibration**
 
-The title should be finalized after V9.
-
-## Abstract
-
-To be completed after the final experiment.
-
-Include:
-
-1. problem;
-2. dataset;
-3. methodology;
-4. preprocessing contribution;
-5. threshold strategy;
-6. best quantitative result;
-7. conclusion.
-
-## 1. Introduction
-
-- Network intrusion and anomaly detection
-- Problem definition
-- Motivation for Autoencoder-based anomaly detection
-- Research objectives
-- Contributions
-
-Potential contributions:
-
-- reproducible Autoencoder pipeline;
-- train-only preprocessing parameter estimation;
-- robust treatment of heavy-tailed flow features;
-- model-independent feature-separation analysis;
-- per-attack-family evaluation;
-- semi-supervised threshold calibration;
-- systematic V1→V9 experimentation.
-
-## 2. Related Work
-
-Research:
-
-- network intrusion detection;
-- CICIDS2017;
-- Autoencoder anomaly detection;
-- reconstruction-error methods;
-- robust preprocessing;
-- threshold calibration;
-- semi-supervised anomaly detection.
-
-## 3. Dataset
+## 1. Abstract
 
 Describe:
 
+- network anomaly detection problem;
+- CICIDS2017-derived flow data;
+- normal-traffic Autoencoder training;
+- preprocessing evolution;
+- feature-separation analysis;
+- selective log transformation;
+- feature-weighted reconstruction;
+- threshold calibration;
+- attack-family evaluation.
+
+The final abstract must contain actual measured results after the experiments are finalized.
+
+## 2. Introduction
+
+Discuss:
+
+- importance of network anomaly detection;
+- limitations of purely signature-based methods;
+- motivation for Autoencoders;
+- challenges caused by heterogeneous flow features;
+- importance of threshold selection.
+
+## 3. Related Work
+
+Potential themes:
+
+- Autoencoder anomaly detection;
 - CICIDS2017;
-- flow representation;
-- experimental Parquet subsets;
-- normal traffic;
-- six selected attack groups;
-- feature representation.
+- reconstruction-error thresholding;
+- robust preprocessing;
+- feature weighting;
+- semi-supervised anomaly detection.
 
-Exact counts must be verified from data.
+## 4. Dataset
 
-## 4. Methodology
+Document:
 
-### 4.1 Cleaning
+- CICIDS2017 source;
+- processed Parquet subsets;
+- normal and attack groups;
+- feature preparation;
+- train/validation/test protocol.
 
-Inf/NaN handling and constant-feature removal.
+## 5. Methodology
 
-### 4.2 Data Split
+### 5.1 Preprocessing
 
-70/15/15 normal split.
+- NaN/Inf handling
+- constant feature removal
+- clipping
+- RobustScaler
+- selective signed log transform
 
-### 4.3 Clipping
+### 5.2 Autoencoders
 
-Train-derived 0.001 and 0.999 quantile bounds.
+- Shallow architecture
+- Deep architecture
+- bottleneck evolution
 
-### 4.4 Signed Log1p
+### 5.3 Feature Separation
 
-\[
-x'=sign(x)\log(1+|x|)
-\]
+Explain Cohen's-d-style analysis.
 
-### 4.5 RobustScaler
+### 5.4 Feature-Weighted Loss
 
-Fitted only on training data.
+Define:
 
-### 4.6 Autoencoders
+```text
+L = mean_j [w_j (x_j - x̂_j)^2]
+```
 
-Shallow and deep architectures with V6 bottleneck changes.
+and explain how weights are derived.
 
-### 4.7 Reconstruction Error
+### 5.5 Threshold Calibration
 
-\[
-E(x)=rac{1}{n}\sum_i(x_i-\hat{x}_i)^2
-\]
+Explain:
 
-### 4.8 Thresholding
+- normal validation reconstruction errors;
+- attack calibration samples;
+- candidate thresholds;
+- F1 optimization.
 
-Compare normal-only P99 and semi-supervised F1 calibration.
+## 6. Experimental Design
 
-### 4.9 Feature Separability
+Describe V1–V8 as controlled evolution.
 
-Describe V5's standardized mean-difference diagnostic.
+Explicitly identify where multiple variables changed simultaneously.
 
-## 5. Experimental Design
+## 7. Results
 
-Describe V1→V9.
+Report:
 
-Explicitly identify versions with multiple simultaneous changes.
+- global metrics;
+- per-attack metrics;
+- ROC curves;
+- reconstruction-error distributions;
+- feature weights;
+- training curves.
 
-V6 should be presented as a combined bottleneck and threshold experiment.
+## 8. Ablation Study
 
-## 6. Results
+At minimum compare:
 
-- Global results
-- Per-attack results
-- Feature-separation results
-- Threshold comparison
-- Ablation results if implemented
+- all-feature log vs selective log;
+- ordinary MSE vs weighted MSE;
+- P99 vs F1 threshold.
 
-## 7. Discussion
+## 9. Discussion
 
-Discuss preprocessing, latent representation, thresholding, attack-family differences, calibration/test separation, and deployment implications.
+Discuss:
 
-## 8. Conclusion
+- representation capacity;
+- feature separability;
+- threshold sensitivity;
+- feature weighting;
+- attack-specific weaknesses;
+- leakage controls.
 
-Only conclusions supported by verified experiments.
+## 10. Limitations
 
-## 9. Future Work
+At minimum:
+
+1. Current threshold calibration/evaluation overlap.
+2. V8 uses attack information for feature-weight construction.
+3. V6 changed bottleneck and threshold simultaneously.
+4. Exact generalization to unseen attack families requires separate testing.
+
+## 11. Conclusion
+
+Summarize the final evidence rather than claiming improvement without measured results.
+
+## 12. Future Work
+
+Possible directions:
 
 - strict calibration/test separation;
-- threshold sensitivity;
-- alternative anomaly detectors;
-- feature selection;
-- temporal modeling;
-- cross-dataset validation;
-- real-network validation;
-- explainability.
-
-## Appendix
-
-- hyperparameters;
-- feature list;
-- preprocessing parameters;
-- experiment log;
-- threshold values;
-- confusion matrices;
-- per-attack tables;
-- training curves.
+- ablation experiments;
+- unseen-attack testing;
+- temporal evaluation;
+- adaptive thresholding;
+- comparison with additional anomaly-detection baselines.

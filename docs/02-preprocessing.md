@@ -1,110 +1,139 @@
-# Preprocessing
+# 02 — Preprocessing Evolution
 
-## 1. Final Pipeline Through V6
+## 1. Common Preprocessing
 
-```text
-Cleaning
-   ↓
-Constant-feature removal
-   ↓
-Normal Train / Validation / Test split
-   ↓
-Train-based clipping
-   ↓
-Signed log1p
-   ↓
-RobustScaler
-```
+Across versions, the project performs:
 
-## 2. Cleaning
+1. Remove `Label` from model features.
+2. Replace `inf/-inf` with NaN.
+3. Drop rows containing NaN.
+4. Remove constant columns based on normal training data.
+5. Enforce the same feature-column order for all datasets.
 
-Infinite values are converted to NaN and missing rows are removed.
-
-Constant features are removed from the normal data and the resulting feature list is reused across datasets.
-
-Artifacts:
+The selected feature list is stored in:
 
 ```text
-Cols/constant_cols.pkl
 Cols/feature_columns.pkl
 ```
 
-## 3. Split
+## 2. V1 — StandardScaler
 
-Normal data uses a 70/15/15 train/validation/test split.
-
-The normal test set is reserved for final evaluation.
-
-## 4. V1 — StandardScaler
-
-V1 used `StandardScaler` without explicit clipping.
-
-This was the baseline.
-
-## 5. V2 — Clipping + RobustScaler
-
-V2 introduced train-derived percentile clipping:
+V1 uses:
 
 ```text
-lower = 0.001
-upper = 0.999
+Normal data
+   ↓
+NaN/Inf cleaning
+   ↓
+constant-feature removal
+   ↓
+70/15/15 split
+   ↓
+StandardScaler
 ```
 
-and replaced `StandardScaler` with `RobustScaler`.
+The scaler is fitted only on training data.
 
-The bounds are calculated only from training data and then reused for validation, normal test, and attack data.
+## 3. V2 — Outlier Clipping + RobustScaler
 
-## 6. V3 — Signed Log1p
+V2 introduces per-feature clipping.
 
-V3 added:
+Bounds are computed only from the training data:
+
+```text
+lower = train.quantile(0.001)
+upper = train.quantile(0.999)
+```
+
+The same training-derived bounds are then applied to validation, normal test, and attack data.
+
+The scaler changes from `StandardScaler` to `RobustScaler`.
+
+The bounds are saved in:
+
+```text
+Cols/clip_bounds.pkl
+```
+
+## 4. V3 — Signed Log Transform
+
+V3 adds:
+
+```text
+x' = sign(x) * log(1 + |x|)
+```
+
+after clipping and before scaling.
+
+The goal is to compress very large magnitudes while retaining the sign.
+
+## 5. V5/V7 — Log Transform on All Features
+
+The earlier implementation applies signed log transformation to every feature after clipping.
+
+This is later reconsidered because some relatively symmetric/count-like features may lose useful information.
+
+## 6. V8 — Selective Log Transform
+
+V8 introduces:
 
 ```python
-np.sign(X_df) * np.log1p(np.abs(X_df))
+compute_skewed_columns(train_df, skew_threshold=1.0)
 ```
 
-after clipping and before RobustScaler.
+A feature is selected for transformation when:
 
-\[
-x' = sign(x)\log(1+|x|)
-\]
+```text
+|skewness| > 1.0
+```
 
-The purpose is to compress large magnitudes in highly skewed network-flow features.
+Only those features receive signed log1p transformation.
 
-## 7. V4
+The selected columns are stored in:
 
-V4 kept the V3 preprocessing unchanged.
+```text
+Cols/skewed_cols.pkl
+```
 
-Its primary contribution was per-attack evaluation.
+This creates the following V8 pipeline:
 
-## 8. V5 — Feature-Separation Diagnostic
+```text
+Raw features
+   ↓
+NaN / Inf cleaning
+   ↓
+Constant-feature removal
+   ↓
+Train / Val / Test split
+   ↓
+Train-derived clipping
+   ↓
+Skewness analysis on Train
+   ↓
+Selective signed log1p
+   ↓
+RobustScaler
+   ↓
+Autoencoder
+```
 
-V5 kept the V3 preprocessing unchanged but added a model-independent diagnostic.
+## 7. Leakage Control
 
-For each attack family, transformed attack means are compared with transformed normal means:
+The intended rule is:
 
-\[
-d_j =
-\left|
-rac{\mu_{attack,j}-\mu_{normal,j}}
-{\sigma_{normal,j}}
-ight|
-\]
+> Parameters learned from data must be derived from training data only.
 
-The largest values are reported as the most separated features.
+This applies to:
 
-This diagnostic does not modify model training.
+- constant feature selection;
+- clipping bounds;
+- skewed-feature selection;
+- RobustScaler parameters.
 
-## 9. V6
+The same transformations are then applied to validation and test/attack data.
 
-V6 keeps exactly the same preprocessing pipeline as V5.
+## 8. Important V8 Methodological Change
 
-Its main changes are:
+V8 uses attack/normal separation information to derive feature weights. This is not a preprocessing-only change. The resulting weights influence the Autoencoder training loss.
 
-- tighter Autoencoder bottlenecks;
-- semi-supervised threshold calibration.
-
-## 10. Leakage Control
-
-Clipping bounds and scaler parameters remain training-derived.
-
-Attack samples used by V6 for threshold calibration do not affect preprocessing or Autoencoder weights.
+Therefore V8 introduces supervised information into the training objective even though the Autoencoder reconstructs normal data.

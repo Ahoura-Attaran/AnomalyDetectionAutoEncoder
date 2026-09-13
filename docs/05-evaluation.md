@@ -1,90 +1,83 @@
-# Evaluation
+# 05 — Evaluation
 
 ## 1. Global Evaluation
 
-The primary task is binary:
+The system combines:
+
+- untouched normal test data;
+- all attack datasets.
+
+It calculates:
+
+- classification report;
+- confusion matrix;
+- ROC-AUC.
+
+The anomaly score is the reconstruction error.
+
+## 2. Per-Attack Evaluation
+
+V4 introduced evaluation separately for:
+
+- Bruteforce
+- DoS
+- WebAttacks
+- Botnet
+- DDoS
+- Portscan
+
+For every attack family the code reports:
+
+- Recall
+- Precision
+- F1
+- ROC-AUC
+- number of samples
+
+The attack family is evaluated against the same normal test set.
+
+## 3. Feature Separation Diagnostic
+
+V5 introduced Cohen's-d-style feature separation analysis.
+
+For each attack:
 
 ```text
-Normal = 0
-Attack = 1
+d_j =
+abs((mean_attack_j - mean_normal_j) / std_normal_j)
 ```
 
-The normal test set is combined with the attack datasets after applying the same train-derived preprocessing pipeline.
+The largest values identify features with stronger attack/normal separation.
 
-Metrics:
+This is a diagnostic and not an Autoencoder performance metric.
 
-- Precision
-- Recall
-- F1
-- Confusion Matrix
-- ROC-AUC
+## 4. V8 Weighted-Loss Evaluation
 
-## 2. Confusion Matrix
+V8 converts the feature-separation analysis into feature weights.
 
-| | Predicted Normal | Predicted Attack |
-|---|---:|---:|
-| Actual Normal | TN | FP |
-| Actual Attack | FN | TP |
+The maximum Cohen's d for each feature across attack families is normalized and mapped to:
 
-## 3. ROC-AUC
+```text
+[min_weight, max_weight] = [1, 5]
+```
 
-ROC-AUC uses continuous reconstruction error rather than thresholded predictions.
+These weights affect:
 
-Higher reconstruction error represents a stronger anomaly score.
+1. model training loss;
+2. reconstruction error;
+3. threshold calibration;
+4. final classification metrics.
 
-## 4. Per-Attack Evaluation
+## 5. Recommended Final Reporting
 
-V4 introduced independent evaluation of each attack family against the same normal test set:
+For every final experiment, report:
 
-\[
-Normal \quad vs \quad Attack_i
-\]
+| Level | Metrics |
+|---|---|
+| Global | Precision, Recall, F1, ROC-AUC, confusion matrix |
+| Attack family | Recall, Precision, F1, ROC-AUC, sample count |
+| Threshold | threshold value and calibration F1 |
+| Training | best epoch / validation loss |
+| Feature analysis | selected skewed features and feature-weight distribution |
 
-Reported metrics:
-
-- Recall
-- Precision
-- F1
-- ROC-AUC
-- sample count
-
-## 5. V5 — Feature-Level Diagnostic
-
-V5 adds a separate, model-independent diagnostic before training.
-
-For each attack family it reports the top features with the largest standardized mean difference from normal traffic after the selected transformations.
-
-This is not an Autoencoder performance metric.
-
-It answers:
-
-> Is this attack family distinguishable in the selected feature representation at all?
-
-This helps distinguish a model problem from a feature-information problem.
-
-## 6. V6 — Threshold-Aware Evaluation
-
-V6 keeps the global and per-attack evaluation procedures but supplies the F1-optimized threshold instead of the normal-only P99 threshold.
-
-The old P99 threshold is also calculated as a reference.
-
-## 7. V6 Evaluation Caveat
-
-Attack samples used for threshold calibration remain in the attack datasets used for evaluation.
-
-Therefore V6 threshold-dependent final metrics are not based on a perfectly disjoint calibration/test split.
-
-This limitation must be reported in the final paper unless corrected in a later version.
-
-## 8. Required Final Results
-
-Numerical values should be populated from actual execution logs:
-
-- global Precision/Recall/F1/AUC;
-- confusion matrices;
-- per-attack metrics;
-- threshold values;
-- calibration F1;
-- validation loss and training epochs.
-
-No numerical result should be inferred from source code.
+No numerical result should be added to the documentation unless it comes from an actual run.
