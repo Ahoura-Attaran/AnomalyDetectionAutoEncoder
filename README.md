@@ -32,7 +32,7 @@ The project gradually evolves from a basic Autoencoder into a **feature-aware Au
 
 ---
 
-# 📊 Dataset
+#  Dataset
 
 The project is based on the **CICIDS2017** dataset.
 
