@@ -1,67 +1,43 @@
-# 07 — Results and Analysis
+# 07 — Results Analysis
 
-## 1. Purpose
+## Rule
 
-This document records numerical results only after actual execution of the corresponding version.
+No numerical result is inserted unless it was produced by an actual experiment.
 
-No metric is fabricated here.
+## Comparison template
 
-## 2. Required Comparison
+| Version | Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+|---|---|---:|---:|---:|---:|---:|
+| V1 | Shallow | TBD | TBD | TBD | TBD | TBD |
+| V1 | Deep | TBD | TBD | TBD | TBD | TBD |
+| V6 | Shallow | TBD | TBD | TBD | TBD | TBD |
+| V6 | Deep | TBD | TBD | TBD | TBD | TBD |
+| V8 | Shallow | TBD | TBD | TBD | TBD | TBD |
+| V8 | Deep | TBD | TBD | TBD | TBD | TBD |
+| V9 | Ensemble | TBD | TBD | TBD | TBD | TBD |
 
-The main comparison should include:
+## Interpretation
 
-| Version | Shallow F1 | Shallow AUC | Deep F1 | Deep AUC |
-|---|---:|---:|---:|---:|
-| V1 | — | — | — | — |
-| V2 | — | — | — | — |
-| V3 | — | — | — | — |
-| V4 | — | — | — | — |
-| V5 | — | — | — | — |
-| V6 | — | — | — | — |
-| V7 | — | — | — | — |
-| V8 | — | — | — | — |
+### ROC-AUC increases
+Attack scores are ranked above normal scores more effectively.
 
-## 3. Attack-Level Analysis
+### ROC-AUC increases but F1 does not
+Ranking improved, but the decision threshold did not necessarily improve.
 
-For V8, record:
+### Recall increases while Precision decreases
+The detector catches more attacks at the cost of more false alarms.
 
-| Attack | Recall | Precision | F1 | AUC | N |
-|---|---:|---:|---:|---:|---:|
-| Bruteforce | — | — | — | — | — |
-| DoS | — | — | — | — | — |
-| WebAttacks | — | — | — | — | — |
-| Botnet | — | — | — | — | — |
-| DDoS | — | — | — | — | — |
-| Portscan | — | — | — | — | — |
+### PR-AUC increases
+Ranking improves under class imbalance.
 
-## 4. Feature-Weight Analysis
+### One attack family remains weak
+Inspect V5 separability results and feature weights.
 
-V8 should additionally record:
+## Required final studies
 
-- number of skewed features;
-- threshold used for skewness;
-- minimum feature weight;
-- maximum feature weight;
-- top weighted features;
-- Cohen's d values used to construct weights.
-
-## 5. Interpretation Rules
-
-A higher Recall means fewer attacks are missed.
-
-A higher Precision means fewer normal samples are incorrectly classified as attacks.
-
-F1 summarizes Precision and Recall.
-
-ROC-AUC evaluates ranking/separation based on reconstruction score and is independent of the chosen threshold.
-
-## 6. Important Scientific Question
-
-If V8 improves metrics, the documentation must determine whether the improvement is caused by:
-
-- selective log transformation;
-- feature weighting;
-- threshold behavior;
-- or a combination.
-
-A single V8-vs-V7 comparison cannot isolate these causes.
+1. V6 2×2 ablation.
+2. V8 2×2 ablation.
+3. V9 Shallow vs Deep vs Ensemble.
+4. Separate calibration/test attack samples.
+5. Multiple seeds.
+6. Chronological holdout.

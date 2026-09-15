@@ -1,139 +1,63 @@
 # 02 — Preprocessing Evolution
 
-## 1. Common Preprocessing
+## V1 — StandardScaler
 
-Across versions, the project performs:
+Fit on training data only and apply to validation/test/attack data.
 
-1. Remove `Label` from model features.
-2. Replace `inf/-inf` with NaN.
-3. Drop rows containing NaN.
-4. Remove constant columns based on normal training data.
-5. Enforce the same feature-column order for all datasets.
+No clipping or log transformation.
 
-The selected feature list is stored in:
+## V2 — Clipping + RobustScaler
 
-```text
-Cols/feature_columns.pkl
-```
+Training-derived clipping:
+- lower quantile = 0.001
+- upper quantile = 0.999
 
-## 2. V1 — StandardScaler
+The same bounds are applied to later splits.
 
-V1 uses:
+`StandardScaler` is replaced by `RobustScaler`.
+
+## V3 — Signed log1p
 
 ```text
-Normal data
-   ↓
-NaN/Inf cleaning
-   ↓
-constant-feature removal
-   ↓
-70/15/15 split
-   ↓
-StandardScaler
+sign(x) * log1p(abs(x))
 ```
 
-The scaler is fitted only on training data.
+Applied after clipping to compress extreme magnitudes while preserving sign.
 
-## 3. V2 — Outlier Clipping + RobustScaler
+## V4–V7
 
-V2 introduces per-feature clipping.
+The broad log transformation remains while the project adds attack-family evaluation, feature separability diagnostics, bottleneck experiments and threshold calibration.
 
-Bounds are computed only from the training data:
+## V8 — Selective log
+
+Training-set skewness determines which features receive signed log1p:
 
 ```text
-lower = train.quantile(0.001)
-upper = train.quantile(0.999)
+abs(skewness) > 1.0
 ```
 
-The same training-derived bounds are then applied to validation, normal test, and attack data.
+Selected columns are saved as `Cols/skewed_cols.pkl`.
 
-The scaler changes from `StandardScaler` to `RobustScaler`.
+## V8 — Feature weighting
 
-The bounds are saved in:
+For feature j:
 
 ```text
-Cols/clip_bounds.pkl
+d_j = abs((mu_attack,j - mu_normal,j) / sigma_normal,j)
 ```
 
-## 4. V3 — Signed Log Transform
+The maximum effect size across attack families is used, then weights are mapped approximately to `[1, 5]`.
 
-V3 adds:
+Saved as `Cols/feature_weights.pkl`.
+
+## V8/V9 — Weighted reconstruction
 
 ```text
-x' = sign(x) * log(1 + |x|)
+WeightedMSE = mean(w_j * (x_j - xhat_j)^2)
 ```
 
-after clipping and before scaling.
+The same weights are used for anomaly scoring.
 
-The goal is to compress very large magnitudes while retaining the sign.
+## Caveat
 
-## 5. V5/V7 — Log Transform on All Features
-
-The earlier implementation applies signed log transformation to every feature after clipping.
-
-This is later reconsidered because some relatively symmetric/count-like features may lose useful information.
-
-## 6. V8 — Selective Log Transform
-
-V8 introduces:
-
-```python
-compute_skewed_columns(train_df, skew_threshold=1.0)
-```
-
-A feature is selected for transformation when:
-
-```text
-|skewness| > 1.0
-```
-
-Only those features receive signed log1p transformation.
-
-The selected columns are stored in:
-
-```text
-Cols/skewed_cols.pkl
-```
-
-This creates the following V8 pipeline:
-
-```text
-Raw features
-   ↓
-NaN / Inf cleaning
-   ↓
-Constant-feature removal
-   ↓
-Train / Val / Test split
-   ↓
-Train-derived clipping
-   ↓
-Skewness analysis on Train
-   ↓
-Selective signed log1p
-   ↓
-RobustScaler
-   ↓
-Autoencoder
-```
-
-## 7. Leakage Control
-
-The intended rule is:
-
-> Parameters learned from data must be derived from training data only.
-
-This applies to:
-
-- constant feature selection;
-- clipping bounds;
-- skewed-feature selection;
-- RobustScaler parameters.
-
-The same transformations are then applied to validation and test/attack data.
-
-## 8. Important V8 Methodological Change
-
-V8 uses attack/normal separation information to derive feature weights. This is not a preprocessing-only change. The resulting weights influence the Autoencoder training loss.
-
-Therefore V8 introduces supervised information into the training objective even though the Autoencoder reconstructs normal data.
+Attack/normal information contributes to feature weights. Therefore V8/V9 are label-informed/semi-supervised components rather than purely unsupervised anomaly detection.

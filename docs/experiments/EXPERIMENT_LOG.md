@@ -1,35 +1,82 @@
-# Experiment Log
+# Experiment Log — V1 to V9
 
-| ID | Version | Change | Reason | Result | Decision |
-|---|---|---|---|---|---|
-| EXP-001 | V1 | Baseline AE + StandardScaler + P99 | Establish baseline | Record from execution | Baseline |
-| EXP-002 | V2 | Clipping + RobustScaler | Improve preprocessing robustness | Record from execution | Compare |
-| EXP-003 | V3 | Signed log1p | Compress large/skewed values | Record from execution | Compare |
-| EXP-004 | V4 | Per-attack evaluation | Reveal family-specific weaknesses | Record from execution | Diagnostic |
-| EXP-005 | V5 | Cohen's d feature separation | Determine feature-level separability | Record from execution | Diagnostic |
-| EXP-006 | V6 | Bottleneck compression + F1 threshold | Test representation compression and threshold calibration | Record from execution | Requires ablation |
-| EXP-007 | V7 | Deep bottleneck 4 → 12 | Test whether V6 Deep model was over-compressed | Record from execution | Compare |
-| EXP-008 | V8 | Selective log + feature-weighted MSE | Preserve less-skewed features and emphasize discriminative features | Record from execution | Requires ablation |
+This is the operational record. Fill numerical fields only after executing the corresponding version.
 
-## V8 Reproducibility Fields
+## EXP-001 — V1
+Objective: baseline autoencoders.
+Changes: StandardScaler, P99 threshold, Shallow 16, Deep 8.
+Results: TBD
 
-When V8 is executed, record:
+## EXP-002 — V2
+Objective: robust preprocessing.
+Changes: clipping + RobustScaler.
+Results: TBD
 
-- random seed;
-- number of input features;
-- number of skewed features;
-- skewness threshold;
-- feature-weight range;
-- top weighted features;
-- Shallow best epoch;
-- Deep best epoch;
-- calibration threshold;
-- calibration F1;
-- final global metrics;
-- per-attack metrics.
+## EXP-003 — V3
+Objective: reduce skew/extreme-value influence.
+Change: signed log1p.
+Results: TBD
 
-## Methodological Note
+## EXP-004 — V4
+Objective: expose family-specific weaknesses.
+Change: per-attack metrics.
+Results: TBD
 
-V8 should not be compared with V7 as if only one variable changed. It changes both the log-transform policy and the training objective.
+## EXP-005 — V5
+Objective: measure feature separability.
+Change: Cohen's-d-style diagnostic.
+Results: TBD
 
-Therefore a controlled ablation is required before claiming that either change independently caused an improvement.
+## EXP-006 — V6
+Objective: test bottleneck compression and F1 calibration.
+Changes: Shallow 16→8, Deep 8→4, P99→F1.
+Required: 2×2 bottleneck × threshold ablation.
+Results: TBD
+
+## EXP-007 — V7
+Objective: test larger Deep latent space.
+Change: Deep 4→12.
+Results: TBD
+
+## EXP-008 — V8
+Objective: feature-aware preprocessing and reconstruction.
+Changes: selective log, feature weighting, weighted loss/score.
+Required: 2×2 log policy × loss ablation.
+Results: TBD
+
+## EXP-009 — V9
+Objective: combine Shallow and Deep scores.
+Change: score-level ensemble.
+Formula:
+`0.5*(ShallowScore/ShallowThreshold) + 0.5*(DeepScore/DeepThreshold)`
+Results: TBD
+
+## Required result fields
+
+- code version
+- dataset version
+- feature count
+- normal count
+- attack counts
+- seed
+- epochs
+- training time
+- inference time
+- threshold
+- Precision
+- Recall
+- F1
+- ROC-AUC
+- PR-AUC
+- FPR
+- confusion matrix
+- per-attack metrics
+
+## Required next experiments
+
+1. V6 2×2 ablation.
+2. V8 2×2 ablation.
+3. Calibration/test separation.
+4. Multiple seeds.
+5. Chronological holdout.
+6. Final Shallow vs Deep vs Ensemble comparison.

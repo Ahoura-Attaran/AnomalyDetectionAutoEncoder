@@ -1,109 +1,53 @@
 # 08 — Discussion
 
-## 1. Evolution of the Approach
+## Overall evolution
 
-The project evolved from a conventional reconstruction-based anomaly detector toward a more feature-aware system.
+The project moves from a basic reconstruction detector to a feature-aware score ensemble.
 
-The major progression is:
+- V1 establishes the baseline.
+- V2 improves numerical robustness.
+- V3 addresses skew/extreme magnitudes.
+- V4 exposes family-specific performance.
+- V5 studies feature separability.
+- V6 changes representation compression and threshold strategy.
+- V7 tests a larger Deep representation.
+- V8 introduces feature-aware preprocessing and reconstruction.
+- V9 combines complementary anomaly scores.
 
-```text
-Baseline
-  ↓
-Robust preprocessing
-  ↓
-Magnitude transformation
-  ↓
-Attack-specific diagnostics
-  ↓
-Feature separability analysis
-  ↓
-Threshold calibration
-  ↓
-Bottleneck revision
-  ↓
-Feature-aware loss
-```
+## Feature weighting
 
-## 2. V7 Interpretation
+Feature weights emphasize dimensions with stronger attack/normal separation.
 
-V7 revisits the latent representation capacity of the Deep Autoencoder.
+This may align reconstruction with informative dimensions, but it uses attack labels and therefore changes the method's scientific characterization.
 
-The Deep bottleneck changes from 4 to 12.
+## Threshold calibration
 
-This tests the hypothesis that the V6 bottleneck was too restrictive.
+F1 calibration directly optimizes a classification objective and may improve the practical decision boundary compared with fixed P99.
 
-## 3. V8 Interpretation
+The trade-off is dependence on labeled attack examples.
 
-V8 addresses a different question:
+## Ensemble
 
-> Should every feature contribute equally to the reconstruction objective?
+V9 performs score-level fusion after independent model inference. It does not merge latent representations.
 
-The answer tested experimentally is no: features with stronger measured normal-vs-attack separation receive greater weights.
+## Threats to validity
 
-This is a hypothesis-driven change rather than an arbitrary architecture modification.
+- calibration/test overlap
+- V6 confounding
+- V8 confounding
+- random rather than chronological splitting
+- single-seed evaluation
+- metric-selection bias
 
-## 4. Selective Log Transformation
+## Recommended final protocol
 
-V8 also challenges the assumption that every feature benefits from log transformation.
-
-Only features with absolute training skewness above 1.0 are transformed.
-
-This attempts to preserve information in features whose distributions do not require strong compression.
-
-## 5. Main Methodological Risk
-
-The feature weights are calculated using attack data.
-
-Consequently, V8 is no longer a purely unsupervised training procedure.
-
-This must be stated explicitly in any paper or presentation.
-
-## 6. Calibration Leakage Risk
-
-V6–V8 reuse attack samples involved in threshold calibration during final evaluation.
-
-For rigorous publication results, calibration and evaluation attack samples should be disjoint.
-
-## 7. Ablation Study
-
-The recommended next experiment is:
-
-| Experiment | Log | Weighted Loss | Threshold |
-|---|---|---|---|
-| A | All-feature log | No | F1 |
-| B | Selective log | No | F1 |
-| C | Selective log | Yes | F1 |
-
-A second useful control is:
-
-```text
-Selective log + weighted loss + P99 threshold
-```
-
-This separates the contribution of the loss from the threshold strategy.
-
-## 8. Final Model Selection
-
-The best model should not be selected using Recall alone.
-
-The decision should consider:
-
-- Recall
-- Precision
-- F1
-- ROC-AUC
-- attack-family consistency
-- false-positive behavior
-- calibration protocol
-- computational cost
-- methodological validity
-
-## 9. Practical Conclusion
-
-The central contribution of the iterative work is not merely changing Autoencoder depth. It is progressively identifying where the anomaly-detection pipeline loses information:
-
-- preprocessing;
-- representation compression;
-- threshold selection;
-- feature separability;
-- feature contribution to reconstruction error.
+1. Fit preprocessing using training data.
+2. Train autoencoders on normal training traffic.
+3. Separate calibration data.
+4. Keep final test data untouched.
+5. Calibrate thresholds only on calibration data.
+6. Repeat with multiple seeds.
+7. Add chronological evaluation.
+8. Report ROC-AUC, PR-AUC, Precision, Recall, F1 and FPR.
+9. Report every attack family.
+10. Preserve V1→V9 as the experimental history.

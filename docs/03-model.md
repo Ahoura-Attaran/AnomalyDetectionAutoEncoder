@@ -1,130 +1,84 @@
 # 03 — Model Architecture
 
-## 1. Models
-
-The project compares:
-
-- Shallow Autoencoder
-- Deep Autoencoder
-
-Both reconstruct the input vector and use reconstruction error as the anomaly score.
-
-## 2. Shallow Autoencoder
-
-Current V7/V8 architecture:
+## Shallow Autoencoder
 
 ```text
 Input
-  ↓
-Dense(64, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Dense(32, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Bottleneck(8, ReLU)
-  ↓
-Dense(32, ReLU)
-  ↓
-Dense(64, ReLU)
-  ↓
-Linear Output
+→ Dense(64, ReLU)
+→ BatchNormalization
+→ Dropout(0.2)
+→ Dense(32, ReLU)
+→ BatchNormalization
+→ Dropout(0.2)
+→ Bottleneck
+→ Dense(32)
+→ Dense(64)
+→ Linear Output
 ```
 
-## 3. Deep Autoencoder
+Bottleneck:
+- V1–V5: 16
+- V6–V9: 8
 
-Current V8 architecture:
+## Deep Autoencoder
 
 ```text
 Input
-  ↓
-Dense(128, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Dense(64, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Dense(32, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Bottleneck(12, ReLU)
-  ↓
-Dense(32, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Dense(64, ReLU)
-  ↓
-BatchNorm
-  ↓
-Dropout(0.2)
-  ↓
-Dense(128, ReLU)
-  ↓
-Linear Output
+→ Dense(128)
+→ BatchNormalization
+→ Dropout
+→ Dense(64)
+→ BatchNormalization
+→ Dropout
+→ Dense(32)
+→ BatchNormalization
+→ Dropout
+→ Bottleneck
+→ Dense(32)
+→ BatchNormalization
+→ Dropout
+→ Dense(64)
+→ BatchNormalization
+→ Dropout
+→ Dense(128)
+→ Linear Output
 ```
 
-## 4. Bottleneck Evolution
+Bottleneck:
+- V1–V5: 8
+- V6: 4
+- V7–V9: 12
 
-| Version | Shallow | Deep |
-|---|---:|---:|
-| V1–V5 | 16 | 8 |
-| V6 | 8 | 4 |
-| V7 | 8 | 12 |
-| V8 | 8 | 12 |
+## Training
 
-V6 attempted stronger compression. V7 reversed the Deep bottleneck from 4 to 12 after the previous experiment suggested that excessive compression could harm representation quality.
+Uses:
+- Adam
+- EarlyStopping
+- ReduceLROnPlateau
+- ModelCheckpoint
 
-## 5. Training
+ReduceLROnPlateau:
+- factor 0.5
+- patience 5
+- minimum learning rate 1e-6
 
-Both models use:
-
-- Adam optimizer
-- up to 100 epochs
-- batch size 512
-- shuffled training data
-- validation loss monitoring
-
-Callbacks:
-
-- EarlyStopping: patience 10, restore best weights
-- ReduceLROnPlateau: factor 0.5, patience 5, minimum LR `1e-6`
-- ModelCheckpoint: save best validation-loss model
-
-## 6. Loss Evolution
-
-V1–V7 primarily use ordinary MSE.
-
-V8 introduces a feature-weighted MSE:
+## V8/V9 weighted objective
 
 ```text
-Weighted MSE =
-mean( feature_weight_j × (y_j - ŷ_j)^2 )
+L = mean_j [w_j * (x_j - xhat_j)^2]
 ```
 
-The same feature weights are also used in the reconstruction error so that the training objective and anomaly score remain aligned.
+Weights are reused in scoring, calibration and evaluation.
 
-## 7. Scientific Interpretation
+## V9 ensemble
 
-The key V8 hypothesis is:
+```text
+ShallowNorm = ShallowScore / ShallowThreshold
+DeepNorm    = DeepScore / DeepThreshold
 
-> Features that exhibit stronger normal-vs-attack separation should contribute more strongly to reconstruction-based anomaly scoring.
+EnsembleScore =
+    0.5 * ShallowNorm +
+    0.5 * DeepNorm
+```
 
-This hypothesis must be validated experimentally rather than assumed to improve detection.
+The ensemble has its own F1-calibrated threshold.

@@ -1,131 +1,154 @@
 # 06 — Experiment History
 
-The project should be interpreted as an iterative sequence:
+This is the central explanation of what changed, why it changed, and what should be tested next.
 
-```text
-V1 → observed problem → V2 → observed problem → ... → V8
-```
+## V1 — Baseline Autoencoders
 
-## V1 — Baseline
+### What changed
+Initial Shallow and Deep autoencoders.
 
-**Method**
+### Configuration
 - StandardScaler
-- normal-only 70/15/15 split
-- Shallow and Deep Autoencoders
-- ordinary MSE
-- P99 normal validation threshold
+- normal-only P99 threshold
+- Shallow bottleneck 16
+- Deep bottleneck 8
 
-**Purpose**
-Establish the baseline.
+### Why V2
+Extreme values can distort scaling.
+
+---
 
 ## V2 — Robust Preprocessing
 
-**Change**
-- training-only 0.001/0.999 clipping
+### What changed
+- train-derived clipping
 - RobustScaler
 
-**Reason**
-Extreme finite values could distort preprocessing and contribute to unstable losses.
+### Why
+Reduce sensitivity to extreme values and heavy tails.
 
-## V3 — Magnitude Compression
+---
 
-**Change**
-- signed log1p on all features.
+## V3 — Signed Log Transformation
 
-**Reason**
-Compress highly skewed and very large values.
+### What changed
+Signed `log1p`.
 
-## V4 — Attack-Specific Evaluation
+### Why
+Compress large magnitudes and reduce skew.
 
-**Change**
-- per-attack Recall, Precision, F1 and AUC.
+---
 
-**Reason**
-Aggregate metrics can hide weaknesses on individual attack families.
+## V4 — Per-Attack Evaluation
+
+### What changed
+Metrics are calculated for individual attack families.
+
+### Why
+Aggregate metrics can hide family-specific failures.
+
+---
 
 ## V5 — Feature Separability Diagnostic
 
-**Change**
-- Cohen's-d-style analysis between normal and each attack family.
+### What changed
+Cohen's-d-style comparison between normal and each attack family.
 
-**Reason**
-Determine whether poor detection is caused by the model or by weak feature-level separability.
+### Why
+Determine whether weak detection is related to weak feature information.
 
-## V6 — Stronger Compression + Threshold Calibration
+Diagnostic only; it does not modify training.
 
-**Changes**
-- Shallow bottleneck: 16 → 8
-- Deep bottleneck: 8 → 4
-- F1-optimized threshold using labeled attack samples.
+---
 
-**Reason**
-Test stronger representation compression and reduce the limitations of a normal-only P99 threshold.
+## V6 — Bottleneck + F1 Threshold
 
-**Important**
-Two variables changed simultaneously, so causal attribution requires an ablation study.
+### What changed
+- Shallow 16 → 8
+- Deep 8 → 4
+- P99 → F1-calibrated threshold
 
-## V7 — Deep Bottleneck Revision
+### Problem
+Two variables changed simultaneously, so a direct causal claim is not valid.
 
-**Change**
-- Deep bottleneck: 4 → 12
-- Shallow remains 8.
+### Required 2×2 ablation
 
-**Reason**
-The V6 Deep bottleneck was considered potentially over-compressed. V7 tests whether a larger latent representation improves preservation of normal traffic patterns and anomaly separability.
+| Experiment | Bottleneck | Threshold |
+|---|---|---|
+| A | Old | P99 |
+| B | New | P99 |
+| C | Old | F1 |
+| D | New | F1 |
 
-**Unchanged**
-- clipping
-- RobustScaler
-- signed log transform
-- Cohen's d diagnostic
-- F1 threshold calibration
-- per-attack evaluation
+---
 
-## V8 — Feature-Aware Autoencoder
+## V7 — Deep Bottleneck Adjustment
 
-V8 contains two major methodological changes.
+### What changed
+Deep bottleneck 4 → 12.
 
-### A. Selective Log Transform
+### Why
+Test whether the V6 representation was over-compressed.
 
-Instead of transforming every feature, V8 calculates training-set skewness and applies signed log1p only when:
+---
+
+## V8 — Feature-Aware Reconstruction
+
+### What changed
+1. Selective log transformation based on skewness.
+2. Cohen's-d-style feature weights.
+3. Weighted reconstruction loss.
+4. Weighted anomaly score.
+
+### Problem
+Log policy and loss objective changed together.
+
+### Required 2×2 ablation
+
+| Experiment | Log Policy | Loss |
+|---|---|---|
+| A | All-log | MSE |
+| B | Selective-log | MSE |
+| C | All-log | Weighted MSE |
+| D | Selective-log | Weighted MSE |
+
+---
+
+## V9 — Score-Level Ensemble
+
+### What changed
+Shallow and Deep scores are normalized and averaged.
 
 ```text
-|skewness| > 1.0
+Ensemble =
+0.5*(ShallowScore/ShallowThreshold)
++
+0.5*(DeepScore/DeepThreshold)
 ```
 
-### B. Feature-Weighted MSE
+The ensemble gets its own F1-calibrated threshold.
 
-Cohen's d values from V8's feature-separation analysis are converted into weights from 1 to 5.
+### Why
+Exploit complementary model behavior without merging latent representations.
 
-The weighted loss is:
+## Final evolution
 
 ```text
-L = mean_j [w_j (x_j - x̂_j)^2]
+V1 Baseline
+ ↓
+V2 Robust preprocessing
+ ↓
+V3 Log compression
+ ↓
+V4 Family-level evaluation
+ ↓
+V5 Feature separability
+ ↓
+V6 Bottleneck + threshold
+ ↓
+V7 Deep bottleneck
+ ↓
+V8 Feature-aware loss
+ ↓
+V9 Score ensemble
 ```
-
-The same weights are used in reconstruction error.
-
-### V8 Hypothesis
-
-Features that are more informative for separating attacks from normal traffic should receive greater influence in the reconstruction objective and anomaly score.
-
-## Version Comparison
-
-| Version | Preprocessing | Model change | Threshold | Evaluation |
-|---|---|---|---|---|
-| V1 | StandardScaler | Baseline | P99 | Global |
-| V2 | Clip + RobustScaler | None | P99 | Global |
-| V3 | + log1p | None | P99 | Global |
-| V4 | Same as V3 | None | P99 | Per-attack |
-| V5 | Same as V3 | None | P99 | Cohen's d |
-| V6 | Same | Bottleneck 8/4 | F1 calibration | Per-attack |
-| V7 | Same | Deep 12 | F1 calibration | Per-attack |
-| V8 | Selective log + weighted features | Same as V7 | F1 calibration | Weighted reconstruction + per-attack |
-
-## Next Scientific Step
-
-V8 should be followed by controlled ablations to determine whether improvement comes from:
-
-1. selective log transformation;
-2. feature weighting;
-3. their interaction.

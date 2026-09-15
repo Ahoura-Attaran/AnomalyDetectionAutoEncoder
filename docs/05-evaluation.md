@@ -1,23 +1,15 @@
 # 05 — Evaluation
 
-## 1. Global Evaluation
+## Global metrics
 
-The system combines:
+- Precision
+- Recall
+- F1
+- ROC-AUC
+- Average Precision / PR-AUC
+- Confusion Matrix
 
-- untouched normal test data;
-- all attack datasets.
-
-It calculates:
-
-- classification report;
-- confusion matrix;
-- ROC-AUC.
-
-The anomaly score is the reconstruction error.
-
-## 2. Per-Attack Evaluation
-
-V4 introduced evaluation separately for:
+## Per-attack metrics
 
 - Bruteforce
 - DoS
@@ -26,58 +18,35 @@ V4 introduced evaluation separately for:
 - DDoS
 - Portscan
 
-For every attack family the code reports:
+## V9 comparison
 
-- Recall
-- Precision
-- F1
-- ROC-AUC
-- number of samples
+Compare:
+1. Shallow
+2. Deep
+3. Ensemble
 
-The attack family is evaluated against the same normal test set.
+Mean attack-family ROC-AUC is an important ranking criterion. Recall is reported but should not be the only selection metric.
 
-## 3. Feature Separation Diagnostic
+## Recommended final metrics
 
-V5 introduced Cohen's-d-style feature separation analysis.
+Also report:
+- False Positive Rate
+- Specificity
+- Balanced Accuracy
+- PR-AUC
+- threshold
+- training time
+- inference time
+- parameter count
+- calibration size
+- mean ± standard deviation across seeds
 
-For each attack:
+## Results template
 
-```text
-d_j =
-abs((mean_attack_j - mean_normal_j) / std_normal_j)
-```
+| Model | Attack | Precision | Recall | F1 | ROC-AUC | PR-AUC | N |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Shallow | Bruteforce | TBD | TBD | TBD | TBD | TBD | TBD |
+| Deep | Bruteforce | TBD | TBD | TBD | TBD | TBD | TBD |
+| Ensemble | Bruteforce | TBD | TBD | TBD | TBD | TBD | TBD |
 
-The largest values identify features with stronger attack/normal separation.
-
-This is a diagnostic and not an Autoencoder performance metric.
-
-## 4. V8 Weighted-Loss Evaluation
-
-V8 converts the feature-separation analysis into feature weights.
-
-The maximum Cohen's d for each feature across attack families is normalized and mapped to:
-
-```text
-[min_weight, max_weight] = [1, 5]
-```
-
-These weights affect:
-
-1. model training loss;
-2. reconstruction error;
-3. threshold calibration;
-4. final classification metrics.
-
-## 5. Recommended Final Reporting
-
-For every final experiment, report:
-
-| Level | Metrics |
-|---|---|
-| Global | Precision, Recall, F1, ROC-AUC, confusion matrix |
-| Attack family | Recall, Precision, F1, ROC-AUC, sample count |
-| Threshold | threshold value and calibration F1 |
-| Training | best epoch / validation loss |
-| Feature analysis | selected skewed features and feature-weight distribution |
-
-No numerical result should be added to the documentation unless it comes from an actual run.
+Repeat for all attack families. Never insert unverified numerical results.
