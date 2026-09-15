@@ -8,7 +8,7 @@ The project is developed incrementally through multiple experimental versions (*
 
 ---
 
-## 📌 Project Overview
+##  Project Overview
 
 Network intrusion detection systems need to distinguish between normal and malicious network traffic.
 
@@ -58,7 +58,7 @@ Exact dataset statistics are intentionally not hard-coded in this README and sho
 
 ---
 
-# 🧠 Methodology
+#  Methodology
 
 The general pipeline is:
 
@@ -103,7 +103,7 @@ Global + Per-Attack Evaluation
 
 ---
 
-# 🏗️ Model Architecture
+#  Model Architecture
 
 Two Autoencoder architectures are evaluated.
 
@@ -210,6 +210,9 @@ V7
  │
  ▼
 V8
+ │
+ ▼
+V9
 ```
 
 Each version addresses a specific limitation discovered during experimentation.
@@ -365,7 +368,7 @@ V7 keeps the V6 preprocessing and threshold-calibration strategy and focuses on 
 
 ---
 
-# 🚀 V8 — Feature-Aware Autoencoder
+#  V8 — Feature-Aware Autoencoder
 
 V8 introduces the most significant methodological change so far.
 
@@ -440,7 +443,7 @@ This keeps the training objective and anomaly scoring mechanism aligned.
 
 ---
 
-# ⚠️ Important Methodological Note
+#  Important Methodological Note
 
 V8 is not purely unsupervised.
 
@@ -576,7 +579,7 @@ This allows the contribution of each component to be studied independently.
 
 ---
 
-# 📁 Project Structure
+#  Project Structure
 
 ```text
 project/
@@ -595,8 +598,6 @@ project/
 │   ├── scaler.pkl
 │   └── *.keras
 │
-├── experiments/
-│   └── EXPERIMENT_LOG.md
 │
 ├── docs/
 │   ├── 00-project-overview.md
@@ -609,6 +610,8 @@ project/
 │   ├── 07-results-analysis.md
 │   ├── 08-discussion.md
 │   └── 09-paper-outline.md
+|   ├── experiments/
+│   └── EXPERIMENT_LOG.md
 │
 ├── autoencoder_anomaly_detection_1.py
 ├── autoencoder_anomaly_detection_2.py
@@ -624,7 +627,7 @@ project/
 
 ---
 
-# ⚙️ Reproducibility
+#  Reproducibility
 
 Experiments use a fixed random seed:
 
@@ -647,7 +650,7 @@ The project stores important preprocessing artifacts so that inference can repro
 
 ---
 
-# 🧪 Experiment Tracking
+#  Experiment Tracking
 
 Every major methodological change is documented as a separate experiment.
 
@@ -670,7 +673,7 @@ experiments/EXPERIMENT_LOG.md
 
 ---
 
-# 📚 Documentation
+#  Documentation
 
 Detailed technical documentation is available under:
 
@@ -693,7 +696,7 @@ Recommended reading order:
 
 ---
 
-# 🔬 Future Work
+#  Future Work
 
 The next stage of the project focuses on controlled experimentation rather than simply adding more complexity.
 
@@ -712,7 +715,7 @@ Planned work includes:
 
 ---
 
-# 📄 Research Direction
+#  Research Direction
 
 The current research direction can be summarized as:
 
@@ -738,7 +741,7 @@ A working title for the eventual paper is:
 
 ---
 
-# 👤 Project Status
+#  Project Status
 
 **Current version:** V8
 
