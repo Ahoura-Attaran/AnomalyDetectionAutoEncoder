@@ -183,7 +183,7 @@ Both architectures are trained using the Adam optimizer with reconstruction-base
 
 ---
 
-# 🔬 Experimental Evolution
+#  Experimental Evolution
 
 The project is intentionally developed as a sequence of experiments.
 
